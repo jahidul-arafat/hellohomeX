@@ -1,0 +1,174 @@
+graph TB
+%% Class defs
+    classDef userClass fill:#E1BEE7,stroke:#8E24AA,stroke-width:2px
+    classDef apiClass fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+    classDef dbClass fill:#C8E6C9,stroke:#388E3C,stroke-width:2px
+    classDef kafkaClass fill:#F8BBD0,stroke:#C2185B,stroke-width:2px
+    classDef osClass fill:#B2DFDB,stroke:#00796B,stroke-width:2px
+    classDef mlClass fill:#FFCCBC,stroke:#E64A19,stroke-width:2px
+    classDef monitorClass fill:#FFCDD2,stroke:#C62828,stroke-width:2px
+    classDef thirdPartyClass fill:#FFF9C4,stroke:#F57F17,stroke-width:2px
+    classDef constraintClass fill:#FFEBEE,stroke:#D32F2F,stroke-width:1px
+
+%% User Layer
+    WebUsers["Web Users"]
+    MobileUsers["Mobile Users"]
+    AdminUsers["Admin/Agents"]
+
+%% Load Balancer
+    LB["Load Balancer / API Gateway"]
+
+%% App Layer
+    API1["API Server 1"]
+    API2["API Server 2"]
+    API3["API Server 3"]
+
+%% MySQL Layer
+    MySQL[("MySQL Primary<br/>Source of Truth")]
+    MySQLConstraint["ACID Compliant<br/>SLA: &lt;50ms writes"]
+    Binlog["MySQL Binlog"]
+
+%% CDC
+    Debezium["Debezium Connector<br/>CDC Real-time"]
+    DebeziumConstraint["Real-time Capture<br/>Lag: &lt;2s"]
+    Kafka["Kafka Topics<br/>- properties<br/>- users<br/>- inquiries"]
+    KafkaConstraint["Buffer &amp; Replay<br/>At-least-once delivery"]
+
+%% ML
+    MLEnrich["ML Enrichment Service<br/>- BERT embeddings<br/>- ResNet images<br/>- Feature extraction"]
+    MLConstraint["768-dim text vectors<br/>2048-dim image vectors<br/>Real-time scoring"]
+
+%% OpenSearch - Masters
+    Master1["Master Node 1"]
+    Master2["Master Node 2"]
+    Master3["Master Node 3"]
+    MasterConstraint["Cluster Management<br/>Quorum: 3 nodes"]
+
+%% OpenSearch - Coordinators
+    Coord1["Coordinating Node 1"]
+    Coord2["Coordinating Node 2"]
+    CoordConstraint["Route Requests<br/>Merge Results"]
+
+%% OpenSearch - Data
+    Data1["Data Node 1"]
+    Data2["Data Node 2"]
+    Data3["Data Node 3"]
+    Data4["Data Node 4"]
+
+%% Indexes
+    Indexes["OpenSearch Indexes<br/>- properties: 6 shards<br/>- user_profiles: 3 shards<br/>- search_history"]
+    IndexConstraint["Replication: 1<br/>HNSW: ef_c=512, m=32<br/>Refresh: 5s"]
+
+%% Search Types
+    VectorSearch["k-NN Vector Search"]
+    VectorConstraint["120-200ms<br/>Recall@10: 98.5%"]
+    FullText["Full-Text BM25 Search"]
+    FullTextConstraint["50-200ms<br/>Fuzzy matching"]
+    Aggregations["Aggregations &amp; Facets"]
+    AggConstraint["100-300ms<br/>15+ facets"]
+
+%% Third-Party
+    GreatSchools["GreatSchools API"]
+    WalkScore["Walk Score API"]
+    CrimeData["Crime Data API"]
+    APIConstraint["Enrich properties<br/>Cache: 24hrs"]
+
+%% Monitoring & Backup
+    Prometheus["Prometheus"]
+    Grafana["Grafana Dashboards"]
+    MonitorConstraint["Metrics &amp; Alerting<br/>P95: &lt;200ms<br/>P99: &lt;300ms"]
+    S3["S3 Backups"]
+    BackupConstraint["Daily snapshots<br/>Retention: 7 days"]
+
+%% Flows
+    WebUsers --> LB
+    MobileUsers --> LB
+    AdminUsers --> LB
+    LB --> API1
+    LB --> API2
+    LB --> API3
+
+    API1 -.->|Writes| MySQL
+    API2 -.->|Writes| MySQL
+    API3 -.->|Writes| MySQL
+    MySQL --> MySQLConstraint
+    MySQL --> Binlog
+    Binlog --> Debezium
+    Debezium --> DebeziumConstraint
+    Debezium --> Kafka
+    Kafka --> KafkaConstraint
+    Kafka --> MLEnrich
+    MLEnrich --> MLConstraint
+
+    MLEnrich -.->|Enrich| GreatSchools
+    MLEnrich -.->|Enrich| WalkScore
+    MLEnrich -.->|Enrich| CrimeData
+    GreatSchools --> APIConstraint
+    WalkScore --> APIConstraint
+    CrimeData --> APIConstraint
+
+    MLEnrich -->|Index| Data1
+    MLEnrich -->|Index| Data2
+
+    API1 -->|Search| Coord1
+    API2 -->|Search| Coord1
+    API3 -->|Search| Coord2
+
+    Coord1 --> CoordConstraint
+    Coord2 --> CoordConstraint
+
+    Coord1 --> Data1
+    Coord1 --> Data2
+    Coord2 --> Data3
+    Coord2 --> Data4
+
+    Data1 --> Indexes
+    Data2 --> Indexes
+    Data3 --> Indexes
+    Data4 --> Indexes
+    Indexes --> IndexConstraint
+
+    Indexes -.-> VectorSearch
+    Indexes -.-> FullText
+    Indexes -.-> Aggregations
+    VectorSearch --> VectorConstraint
+    FullText --> FullTextConstraint
+    Aggregations --> AggConstraint
+
+    Master1 -.->|Manage| Data1
+    Master2 -.->|Manage| Data2
+    Master3 -.->|Manage| Data3
+    Master1 --> MasterConstraint
+    Master2 --> MasterConstraint
+    Master3 --> MasterConstraint
+
+    MySQL -.->|Metrics| Prometheus
+    Kafka -.->|Metrics| Prometheus
+    Data1 -.->|Metrics| Prometheus
+    Data2 -.->|Metrics| Prometheus
+    Prometheus --> Grafana
+    Grafana --> MonitorConstraint
+
+    MySQL -.->|Backup| S3
+    Data3 -.->|Snapshot| S3
+    S3 --> BackupConstraint
+
+%% Legend
+    subgraph Legend
+        L1["Write Path - Dashed arrows"]
+        L2["Search Path - Solid arrows"]
+        L3["Management - Dashed arrows"]
+        L4["Monitoring - Dashed arrows"]
+    end
+
+%% Class assignments (no inline :::)
+    class WebUsers,MobileUsers,AdminUsers userClass
+    class LB,API1,API2,API3 apiClass
+    class MySQL dbClass
+    class Binlog,Debezium,Kafka kafkaClass
+    class MLEnrich mlClass
+    class Master1,Master2,Master3,Coord1,Coord2,Data1,Data2,Data3,Data4,Indexes,VectorSearch,FullText,Aggregations osClass
+    class GreatSchools,WalkScore,CrimeData thirdPartyClass
+    class Prometheus,Grafana,S3 monitorClass
+
+    class MySQLConstraint,DebeziumConstraint,KafkaConstraint,MLConstraint,MasterConstraint,CoordConstraint,IndexConstraint,VectorConstraint,FullTextConstraint,AggConstraint,APIConstraint,MonitorConstraint,BackupConstraint constraintClass

@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HelloHomeX Architecture - Interactive Diagram</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#333;overflow:hidden}
+  header{position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px 30px;text-align:center;z-index:1000;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+  h1{font-size:2em;margin-bottom:5px}.subtitle{font-size:.9em;opacity:.9}
+  .container{display:flex;height:100vh}
+  .main-content{display:flex;width:100%;margin-top:100px;background:#fff}
+  .diagram-container{flex:1;overflow:auto;padding:30px;position:relative;background:#f8f9fa}
+  .diagram-wrapper{background:#fff;border-radius:12px;padding:30px;box-shadow:0 4px 20px rgba(0,0,0,.1);position:relative}
+  .details-sidebar{width:450px;background:#fff;border-left:3px solid #667eea;overflow-y:auto;padding:30px;box-shadow:-5px 0 20px rgba(0,0,0,.1);transition:transform .3s ease}
+  .details-sidebar.hidden{transform:translateX(100%)}
+  .sidebar-header{margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid #667eea}
+  .sidebar-header h2{color:#667eea;font-size:1.6em;margin-bottom:8px}
+  .component-type{display:inline-block;padding:4px 12px;background:#667eea;color:#fff;border-radius:12px;font-size:.75em;font-weight:600;text-transform:uppercase}
+  .sidebar-section{background:#f8f9fa;border-radius:8px;padding:18px;margin-bottom:18px;border-left:4px solid #667eea}
+  .sidebar-section h3{font-size:1.1em;margin-bottom:12px;color:#333;display:flex;align-items:center;gap:8px}
+  .sidebar-section h3:before{content:"▶";color:#667eea;font-size:.8em}
+  .metric-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #e0e0e0}
+  .metric-row:last-child{border-bottom:none}
+  .metric-label{color:#666;font-size:.9em;font-weight:500}
+  .metric-value{color:#667eea;font-weight:700;font-size:.9em}
+  .detail-list{list-style:none;padding:0}
+  .detail-list li{padding:8px 0;font-size:.9em;color:#555;padding-left:24px;position:relative;line-height:1.5}
+  .detail-list li:before{content:"→";position:absolute;left:0;color:#667eea;font-weight:bold;font-size:1.2em}
+  .close-sidebar{position:absolute;top:15px;right:15px;background:#f0f0f0;border:none;width:32px;height:32px;border-radius:50%;font-size:20px;cursor:pointer;color:#666;display:flex;align-items:center;justify-content:center;transition:all .2s}
+  .close-sidebar:hover{background:#667eea;color:#fff}
+  .controls{position:fixed;top:120px;right:20px;display:flex;flex-direction:column;gap:10px;z-index:100}
+  .control-btn{background:#fff;border:2px solid #667eea;width:45px;height:45px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;color:#667eea;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+  .control-btn:hover{background:#667eea;color:#fff;transform:scale(1.1)}
+  .flow-legend{position:fixed;bottom:20px;left:30px;background:#fff;padding:15px 20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.2);z-index:100}
+  .flow-legend h4{margin-bottom:10px;color:#333;font-size:.9em}
+  .legend-items{display:flex;flex-direction:column;gap:8px}
+  .legend-item{display:flex;align-items:center;gap:10px;font-size:.85em}
+  .legend-line{width:40px;height:3px;border-radius:2px}
+  .legend-write{background:#ff6b6b}.legend-search{background:#4dabf7}.legend-enrich{background:#ff922b}
+  .legend-monitor{background:#9775fa;background-image:repeating-linear-gradient(90deg,#9775fa,#9775fa 5px,transparent 5px,transparent 10px)}
+  .tooltip{position:fixed;background:rgba(0,0,0,.95);color:#fff;padding:12px 16px;border-radius:8px;max-width:320px;z-index:2000;pointer-events:none;opacity:0;transition:opacity .2s;font-size:.85em;box-shadow:0 8px 25px rgba(0,0,0,.3)}
+  .tooltip.show{opacity:1}
+  .tooltip h3{margin-bottom:8px;color:#67e;font-size:1.1em}
+  .tooltip .metric{display:flex;justify-content:space-between;margin:6px 0;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+  .tooltip .metric:last-child{border-bottom:none}
+  .tooltip .metric-value{color:#4CAF50;font-weight:600}
+  /* Interactive effects on the SVG */
+  .mermaid svg{overflow:visible}
+  .node, .edgePath{transition:filter .2s, opacity .2s, transform .2s}
+  .dim{filter:blur(2px) opacity(.25)}
+  .focus{transform-box:fill-box;transform-origin:center center;transform:scale(10)}
+  /* Edge highlighting + animation */
+  .edge-highlight path{stroke:#4dabf7 !important;stroke-width:4px !important;filter:drop-shadow(0 0 6px rgba(77,171,247,.7))}
+  .edge-highlight marker path{fill:#4dabf7 !important}
+  .edge-animate path{stroke-dasharray:8 6;animation:dash 1.2s linear infinite}
+  @keyframes dash{to{stroke-dashoffset:-56}}
+  .instruction{position:fixed;bottom:20px;right:20px;background:#fff;padding:12px 18px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,.2);font-size:.85em;color:#666}
+  .instruction strong{color:#667eea}
+</style>
+</head>
+<body>
+<header>
+  <h1>HelloHomeX System Architecture</h1>
+  <p class="subtitle">Interactive Architecture Diagram — Click a component for details & flow highlighting</p>
+</header>
+
+<div class="controls">
+  <button class="control-btn" onclick="resetView()" title="Reset View">⟲</button>
+  <button class="control-btn" onclick="toggleSidebar()" title="Toggle Details">📋</button>
+</div>
+
+<div class="container">
+  <div class="main-content">
+    <div class="diagram-container" id="scrollHost">
+      <div class="diagram-wrapper" id="diagramWrapper">
+        <div id="mermaidMount" class="mermaid" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <aside class="details-sidebar hidden" id="detailsSidebar">
+      <button class="close-sidebar" onclick="closeSidebar()">×</button>
+      <div id="sidebarContent">
+        <div class="sidebar-header">
+          <h2>Select a Component</h2>
+          <p style="color:#666;font-size:.9em;margin-top:10px;">Click any component in the diagram to view details</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="flow-legend">
+  <h4>Data Flow Legend</h4>
+  <div class="legend-items">
+    <div class="legend-item"><div class="legend-line legend-write"></div><span>Write Path (MySQL → OpenSearch)</span></div>
+    <div class="legend-item"><div class="legend-line legend-search"></div><span>Search Path (API → OpenSearch)</span></div>
+    <div class="legend-item"><div class="legend-line legend-enrich"></div><span>Enrichment (ML → APIs)</span></div>
+    <div class="legend-item"><div class="legend-line legend-monitor"></div><span>Monitoring (Dashed)</span></div>
+  </div>
+</div>
+
+<div class="instruction"><strong>💡 Tip:</strong> Hover for tooltip. Click to zoom, blur others, and see the outgoing flow.</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+/* --- Mermaid setup & graph --- */
+const graphDef = `
+graph TB
+  %% Class defs
+  classDef userClass fill:#E1BEE7,stroke:#8E24AA,stroke-width:2px
+  classDef apiClass fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+  classDef dbClass fill:#C8E6C9,stroke:#388E3C,stroke-width:2px
+  classDef kafkaClass fill:#F8BBD0,stroke:#C2185B,stroke-width:2px
+  classDef osClass fill:#B2DFDB,stroke:#00796B,stroke-width:2px
+  classDef mlClass fill:#FFCCBC,stroke:#E64A19,stroke-width:2px
+  classDef monitorClass fill:#FFCDD2,stroke:#C62828,stroke-width:2px
+  classDef thirdPartyClass fill:#FFF9C4,stroke:#F57F17,stroke-width:2px
+  classDef constraintClass fill:#FFEBEE,stroke:#D32F2F,stroke-width:1px,stroke-dasharray:5 5
+
+  %% User Layer
+  WebUsers["🌐 Web Users"]
+  MobileUsers["📱 Mobile Users"]
+  AdminUsers["👤 Admin/Agents"]
+
+  %% Load Balancer
+  LB["⚖️ Load Balancer / API Gateway"]
+
+  %% App Layer
+  API1["🔷 API Server 1"]
+  API2["🔷 API Server 2"]
+  API3["🔷 API Server 3"]
+
+  %% MySQL Layer
+  MySQL[("🗄️ MySQL Primary<br/>Source of Truth")]
+  MySQLConstraint["✓ ACID Compliant<br/>SLA: &lt;50ms writes"]
+  Binlog["📝 MySQL Binlog"]
+
+  %% CDC
+  Debezium["🔄 Debezium Connector<br/>CDC Real-time"]
+  DebeziumConstraint["⚡ Real-time Capture<br/>Lag: &lt;2s"]
+  Kafka["📨 Kafka Topics<br/>- properties<br/>- users<br/>- inquiries"]
+  KafkaConstraint["🔒 Buffer &amp; Replay<br/>At-least-once delivery"]
+
+  %% ML
+  MLEnrich["🤖 ML Enrichment<br/>- BERT embeddings<br/>- ResNet images<br/>- Feature extraction"]
+  MLConstraint["🎯 768-dim text vectors<br/>2048-dim image vectors<br/>Real-time scoring"]
+
+  %% OpenSearch - Masters
+  Master1["⚙️ Master Node 1"]
+  Master2["⚙️ Master Node 2"]
+  Master3["⚙️ Master Node 3"]
+  MasterConstraint["🎛️ Cluster Management<br/>Quorum: 3 nodes"]
+
+  %% OpenSearch - Coordinators
+  Coord1["🔀 Coordinating Node 1"]
+  Coord2["🔀 Coordinating Node 2"]
+  CoordConstraint["🎯 Route Requests<br/>Merge Results"]
+
+  %% OpenSearch - Data
+  Data1["💾 Data Node 1"]
+  Data2["💾 Data Node 2"]
+  Data3["💾 Data Node 3"]
+  Data4["💾 Data Node 4"]
+
+  %% Indexes
+  Indexes["📊 OpenSearch Indexes<br/>- properties: 6 shards<br/>- user_profiles: 3 shards<br/>- search_history"]
+  IndexConstraint["⚡ Replication: 1<br/>HNSW: ef_c=512, m=32<br/>Refresh: 5s"]
+
+  %% Search Types
+  VectorSearch["🔍 k-NN Vector Search"]
+  VectorConstraint["⏱️ 120-200ms<br/>Recall@10: 98.5%"]
+  FullText["📝 Full-Text BM25"]
+  FullTextConstraint["⚡ 50-200ms<br/>Fuzzy matching"]
+  Aggregations["📈 Aggregations &amp; Facets"]
+  AggConstraint["📊 100-300ms<br/>15+ facets"]
+
+  %% Third-Party
+  GreatSchools["🏫 GreatSchools API"]
+  WalkScore["🚶 Walk Score API"]
+  CrimeData["🛡️ Crime Data API"]
+  APIConstraint["🔄 Enrich properties<br/>Cache: 24hrs"]
+
+  %% Monitoring & Backup
+  Prometheus["📊 Prometheus"]
+  Grafana["📈 Grafana Dashboards"]
+  MonitorConstraint["🔔 Metrics &amp; Alerting<br/>P95: &lt;200ms<br/>P99: &lt;300ms"]
+  S3["☁️ S3 Backups"]
+  BackupConstraint["💾 Daily snapshots<br/>Retention: 7 days"]
+
+  %% User to API flows
+  WebUsers -->|HTTP/S| LB
+  MobileUsers -->|HTTP/S| LB
+  AdminUsers -->|HTTP/S| LB
+  LB --> API1
+  LB --> API2
+  LB --> API3
+
+  %% Write Path
+  API1 -.->|Writes| MySQL
+  API2 -.->|Writes| MySQL
+  API3 -.->|Writes| MySQL
+  MySQL --- MySQLConstraint
+  MySQL -->|Binlog| Binlog
+  Binlog -->|CDC| Debezium
+  Debezium --- DebeziumConstraint
+  Debezium -->|Events| Kafka
+  Kafka --- KafkaConstraint
+  Kafka -->|Consume| MLEnrich
+  MLEnrich --- MLConstraint
+
+  %% Third-Party Enrichment
+  MLEnrich -.->|API Call| GreatSchools
+  MLEnrich -.->|API Call| WalkScore
+  MLEnrich -.->|API Call| CrimeData
+  GreatSchools --- APIConstraint
+  WalkScore --- APIConstraint
+  CrimeData --- APIConstraint
+
+  %% ML to OpenSearch
+  MLEnrich -->|Index| Data1
+  MLEnrich -->|Index| Data2
+
+  %% Search Path
+  API1 -->|Search| Coord1
+  API2 -->|Search| Coord1
+  API3 -->|Search| Coord2
+
+  Coord1 --- CoordConstraint
+  Coord2 --- CoordConstraint
+
+  Coord1 --> Data1
+  Coord1 --> Data2
+  Coord2 --> Data3
+  Coord2 --> Data4
+
+  Data1 --> Indexes
+  Data2 --> Indexes
+  Data3 --> Indexes
+  Data4 --> Indexes
+  Indexes --- IndexConstraint
+
+  %% Query Types
+  Indexes -.-> VectorSearch
+  Indexes -.-> FullText
+  Indexes -.-> Aggregations
+  VectorSearch --- VectorConstraint
+  FullText --- FullTextConstraint
+  Aggregations --- AggConstraint
+
+  %% Master Management
+  Master1 -.->|Manage| Data1
+  Master2 -.->|Manage| Data2
+  Master3 -.->|Manage| Data3
+  Master1 --- MasterConstraint
+  Master2 --- MasterConstraint
+  Master3 --- MasterConstraint
+
+  %% Monitoring
+  MySQL -.->|Metrics| Prometheus
+  Kafka -.->|Metrics| Prometheus
+  Data1 -.->|Metrics| Prometheus
+  Data2 -.->|Metrics| Prometheus
+  Prometheus --> Grafana
+  Grafana --- MonitorConstraint
+
+  %% Backup
+  MySQL -.->|Backup| S3
+  Data3 -.->|Snapshot| S3
+  S3 --- BackupConstraint
+
+  %% Class assignments
+  class WebUsers,MobileUsers,AdminUsers userClass
+  class LB,API1,API2,API3 apiClass
+  class MySQL dbClass
+  class Binlog,Debezium,Kafka kafkaClass
+  class MLEnrich mlClass
+  class Master1,Master2,Master3,Coord1,Coord2,Data1,Data2,Data3,Data4,Indexes,VectorSearch,FullText,Aggregations osClass
+  class GreatSchools,WalkScore,CrimeData thirdPartyClass
+  class Prometheus,Grafana,S3 monitorClass
+  class MySQLConstraint,DebeziumConstraint,KafkaConstraint,MLConstraint,MasterConstraint,CoordConstraint,IndexConstraint,VectorConstraint,FullTextConstraint,AggConstraint,APIConstraint,MonitorConstraint,BackupConstraint constraintClass
+`;
+
+mermaid.initialize({
+  startOnLoad:false,
+  securityLevel:'loose',
+  theme:'base',
+  themeVariables:{fontSize:'14px',fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto'}
+});
+
+/* --- Component metadata --- */
+const componentData = {
+  'WebUsers': {
+      title: 'Web Users',
+      type: 'User Interface',
+      description: 'Desktop browser users accessing HelloHomeX platform through responsive web interface',
+      metrics: {
+          'Typical Session': '10-15 minutes',
+          'Conversion Rate': '12.3%',
+          'Avg Properties Viewed': '8-12 properties'
+      },
+      details: {
+          'User Types': ['Property seekers', 'Window shoppers', 'Comparison browsers', 'Returning users'],
+          'Key Features': ['Advanced search filters', 'Interactive map view', 'Saved searches & alerts', 'Property comparison'],
+          'Performance': ['Sub-second page loads', 'Optimized images (WebP)', 'CDN delivery', 'Progressive enhancement']
+      }
+  },
+  'MobileUsers': {
+      title: 'Mobile Users',
+      type: 'User Interface',
+      description: 'iOS and Android app users accessing on cellular/WiFi networks',
+      metrics: {
+          'Response Size': '<100KB per request',
+          'Session Duration': '6-8 minutes',
+          'Auto-complete': '<50ms latency'
+      },
+      details: {
+          'Platforms': ['iOS 14+ (native app)', 'Android 10+ (native app)', 'Progressive Web App (PWA)'],
+          'Optimizations': ['Aggressive image compression', 'Lazy loading', 'Minimal payload', 'Background sync'],
+          'Network': ['Offline mode support', '3G/4G/5G adaptive quality', 'Request batching', 'Smart caching']
+      }
+  },
+  'AdminUsers': {
+      title: 'Admin / Agents',
+      type: 'User Interface',
+      description: 'Property managers and real estate agents using admin dashboard',
+      metrics: {
+          'Users': '~500 agents',
+          'Operations': 'CRUD properties',
+          'Access Level': 'Role-based'
+      },
+      details: {
+          'Capabilities': ['Add/edit/delete properties', 'Manage inquiries', 'View analytics', 'Bulk operations'],
+          'Features': ['Multi-property upload', 'Image management', 'Performance dashboards', 'Lead tracking'],
+          'Security': ['SSO integration', 'Role-based access control (RBAC)', 'Audit logging', '2FA required']
+      }
+  },
+  'LB': {
+      title: 'Load Balancer / API Gateway',
+      type: 'Infrastructure',
+      description: 'Distributes incoming traffic across API servers with SSL termination and request validation',
+      metrics: {
+          'Algorithm': 'Round-robin + health checks',
+          'SSL/TLS': 'TLS 1.3',
+          'Max Connections': '50,000+ concurrent'
+      },
+      details: {
+          'Features': ['SSL/TLS termination', 'Rate limiting (1000 req/min per IP)', 'DDoS protection', 'Request routing'],
+          'Health Checks': ['Every 10 seconds', 'Automatic failover', 'Circuit breaker pattern', 'Graceful degradation'],
+          'Security': ['WAF integration', 'IP allowlist/blocklist', 'Request validation', 'CORS handling']
+      }
+  },
+  'API1': {
+      title: 'API Server',
+      type: 'Application Layer',
+      description: 'Node.js/Express application server handling business logic and request processing',
+      metrics: {
+          'Instance': 'c6i.large',
+          'vCPU': '2 cores',
+          'Memory': '4GB RAM'
+      },
+      details: {
+          'Responsibilities': ['Business logic', 'Authentication & authorization', 'Request validation', 'Response formatting'],
+          'Endpoints': ['/api/v1/properties (search)', '/api/v1/users (auth)', '/api/v1/inquiries (CRUD)', '/api/v1/recommendations'],
+          'Performance': ['Auto-scaling 3-12 instances', 'Response time <100ms', 'Connection pooling', 'Caching layer']
+      }
+  },
+  'MySQL': {
+      title: 'MySQL 8.0+ Primary',
+      type: 'Database',
+      description: 'Source of truth for all property, user, and transaction data with ACID guarantees',
+      metrics: {
+          'Write Latency': '<50ms (P95)',
+          'Engine': 'InnoDB',
+          'Buffer Pool': '8GB'
+      },
+      details: {
+          'ACID Properties': ['Atomicity (all-or-nothing transactions)', 'Consistency (data integrity)', 'Isolation (concurrent transactions)', 'Durability (crash recovery)'],
+          'Handles': ['Property CRUD operations', 'User account management', 'Inquiries & transactions', 'Relational data integrity'],
+          'Backup': ['Daily full backup at 2 AM', 'Point-in-time recovery (PITR)', 'Binlog retention: 7 days', 'Tested monthly restore']
+      }
+  },
+  'Binlog': {
+      title: 'MySQL Binlog',
+      type: 'CDC Component',
+      description: 'Binary log recording all changes (INSERT, UPDATE, DELETE) made to MySQL database',
+      metrics: {
+          'Format': 'ROW (full row image)',
+          'Retention': '7 days',
+          'Size': '~5GB daily'
+      },
+      details: {
+          'Configuration': ['binlog_format=ROW', 'binlog_row_image=FULL', 'log_bin enabled', 'server_id=1'],
+          'Captured Events': ['INSERT statements', 'UPDATE statements', 'DELETE statements', 'DDL changes (optional)'],
+          'Use Cases': ['Change Data Capture (CDC)', 'Point-in-time recovery', 'Replication', 'Audit trail']
+      }
+  },
+  'Debezium': {
+      title: 'Debezium CDC Connector',
+      type: 'CDC Component',
+      description: 'Captures MySQL binlog changes in real-time and publishes to Kafka for data synchronization',
+      metrics: {
+          'Lag': '<2 seconds typical',
+          'Throughput': '5,000 events/sec',
+          'Reliability': '99.99% uptime'
+      },
+      details: {
+          'Captures': ['INSERT operations', 'UPDATE operations (before/after)', 'DELETE operations', 'Schema changes'],
+          'Tables Monitored': ['properties', 'property_images', 'users', 'user_profiles', 'inquiries'],
+          'Guarantees': ['At-least-once delivery', 'Event ordering per table', 'Schema evolution support', 'Snapshot on startup']
+      }
+  },
+  'Kafka': {
+      title: 'Kafka Event Stream',
+      type: 'Message Queue',
+      description: 'Distributed message broker buffering CDC events between MySQL and OpenSearch consumers',
+      metrics: {
+          'Retention': '7 days',
+          'Partitions': '6 per topic',
+          'Replication': '3x (min.insync.replicas=2)'
+      },
+      details: {
+          'Topics': ['hellohomex.properties', 'hellohomex.users', 'hellohomex.inquiries', 'schema-changes.hellohomex'],
+          'Features': ['Message replay capability', 'Consumer groups', 'Offset management', 'Exactly-once semantics (EOS)'],
+          'Performance': ['Low latency (<10ms)', 'High throughput (100K+ msg/s)', 'Durable storage', 'Horizontal scaling']
+      }
+  },
+  'MLEnrich': {
+      title: 'ML Enrichment Service',
+      type: 'ML Pipeline',
+      description: 'Consumes Kafka events, generates embeddings, extracts features, and enriches data with third-party APIs',
+      metrics: {
+          'Text Embeddings': '768 dimensions (BERT)',
+          'Image Embeddings': '2048 dimensions (ResNet-50)',
+          'Processing Time': '200-500ms per property'
+      },
+      details: {
+          'Models Used': ['BERT-base-uncased (text)', 'ResNet-50 (images)', 'Custom feature extractors', 'Sentiment analysis'],
+          'Features Generated': ['Property text embeddings', 'Image similarity vectors', 'Walk score', 'School ratings', 'Crime statistics', 'Transit accessibility'],
+          'Infrastructure': ['Python workers (2-4 instances)', 'GPU acceleration (optional)', 'Model caching', 'Batch processing']
+      }
+  },
+  'GreatSchools': {
+      title: 'GreatSchools API',
+      type: 'Third-Party Integration',
+      description: 'Provides school ratings, reviews, and nearby school information for properties',
+      metrics: {
+          'Cache Duration': '24 hours',
+          'Rate Limit': '1000 req/hour',
+          'Response Time': '300-800ms'
+      },
+      details: {
+          'Data Retrieved': ['School ratings (1-10)', 'Test scores', 'Student demographics', 'Distance from property'],
+          'Coverage': ['K-12 public schools', 'Private schools', 'Charter schools', 'District boundaries'],
+          'Integration': ['REST API', 'Geolocation-based search', 'Cached responses', 'Fallback to defaults on failure']
+      }
+  },
+  'WalkScore': {
+      title: 'Walk Score API',
+      type: 'Third-Party Integration',
+      description: 'Provides walkability, transit, and bike scores for property locations',
+      metrics: {
+          'Cache Duration': '24 hours',
+          'Rate Limit': '5000 req/day',
+          'Response Time': '200-600ms'
+      },
+      details: {
+          'Scores Provided': ['Walk Score (0-100)', 'Transit Score (0-100)', 'Bike Score (0-100)'],
+          'Algorithms': ['Distance to amenities', 'Pedestrian friendliness', 'Public transit access', 'Bike infrastructure'],
+          'Use Cases': ['Property search filtering', 'Personalization factor', 'Neighborhood comparison', 'Map overlays']
+      }
+  },
+  'CrimeData': {
+      title: 'Crime Data API',
+      type: 'Third-Party Integration',
+      description: 'Aggregates crime statistics and safety scores for neighborhoods',
+      metrics: {
+          'Cache Duration': '24 hours',
+          'Rate Limit': '3000 req/day',
+          'Response Time': '400-900ms'
+      },
+      details: {
+          'Data Sources': ['FBI UCR data', 'Local police departments', 'Community reports', 'Historical trends'],
+          'Metrics': ['Violent crime rate', 'Property crime rate', 'Safety score (normalized)', 'Trend analysis'],
+          'Privacy': ['Aggregated data only', 'No personal information', 'Neighborhood-level granularity', 'Anonymized statistics']
+      }
+  },
+  'Master1': {
+      title: 'OpenSearch Master Node',
+      type: 'OpenSearch Infrastructure',
+      description: 'Manages cluster state, shard allocation, and index lifecycle operations',
+      metrics: {
+          'Instance': 't3.medium',
+          'vCPU': '2 cores',
+          'Memory': '4GB RAM'
+      },
+      details: {
+          'Responsibilities': ['Cluster state management', 'Shard allocation decisions', 'Index creation/deletion', 'Node failure detection'],
+          'Quorum': ['Requires 3 master nodes', 'Minimum 2 for quorum', 'Split-brain prevention', 'Automatic leader election'],
+          'Not Used For': ['Data storage', 'Query execution', 'Indexing operations', 'Client requests']
+      }
+  },
+  'Coord1': {
+      title: 'Coordinating Node',
+      type: 'OpenSearch Infrastructure',
+      description: 'Routes search requests to data nodes and merges results from multiple shards',
+      metrics: {
+          'Instance': 'c6i.large',
+          'vCPU': '2 cores',
+          'Memory': '4GB RAM'
+      },
+      details: {
+          'Responsibilities': ['Route search requests', 'Scatter-gather queries', 'Merge shard results', 'Reduce aggregations'],
+          'Performance': ['Stateless (no data)', 'Fast result merging', 'Connection pooling', 'Request caching'],
+          'Load Balancing': ['Round-robin across data nodes', 'Adaptive routing', 'Health-aware', 'Circuit breaker']
+      }
+  },
+  'Data1': {
+      title: 'OpenSearch Data Node',
+      type: 'OpenSearch Infrastructure',
+      description: 'Stores property indexes and executes search, aggregation, and indexing operations',
+      metrics: {
+          'Instance': 'r6i.xlarge',
+          'vCPU': '4 cores',
+          'Memory': '32GB RAM',
+          'Storage': '500GB SSD'
+      },
+      details: {
+          'Stores': ['Primary shards', 'Replica shards', 'Inverted indexes', 'HNSW vector indexes'],
+          'Executes': ['Full-text search queries', 'Vector similarity search', 'Aggregations & facets', 'Document indexing'],
+          'Performance': ['Query execution <200ms P95', 'Indexing: 1000-5000 docs/s', 'JVM heap: 16GB', 'SSD for fast I/O'],
+          'Monitoring': ['JVM heap usage (<75%)', 'CPU utilization (<70%)', 'Disk I/O', 'Query cache hit rate']
+      }
+  },
+  'Indexes': {
+      title: 'OpenSearch Indexes',
+      type: 'Data Storage',
+      description: 'Structured storage for properties, user profiles, and search history with optimized mappings',
+      metrics: {
+          'properties': '6 primary shards, 1 replica',
+          'user_profiles': '3 primary shards, 1 replica',
+          'Refresh Interval': '5 seconds'
+      },
+      details: {
+          'properties Index': ['5M+ documents', '~40GB per shard', '768-dim text vectors', 'Full-text + k-NN enabled', 'BM25 text scoring'],
+          'Configuration': ['HNSW: ef_construction=512, m=32', 'Replication factor: 1', 'Refresh interval: 5s', 'Translog flush: 5s'],
+          'Mappings': ['Dynamic mapping disabled', 'Explicit field types', 'Multi-field text (keyword + text)', 'Nested objects for amenities']
+      }
+  },
+  'VectorSearch': {
+      title: 'k-NN Vector Search',
+      type: 'Search Capability',
+      description: 'Fast approximate nearest neighbor search using HNSW algorithm for ML-powered recommendations',
+      metrics: {
+          'P95 Latency': '120-200ms',
+          'Recall@10': '98.5%',
+          'Algorithm': 'HNSW (Hierarchical Navigable Small World)'
+      },
+      details: {
+          'Use Cases': ['Property recommendations', 'Semantic search', 'Visual similarity (images)', '"More like this" feature'],
+          'Configuration': ['ef_search=300', 'Cosine similarity metric', 'Top-k=100 candidates', 'Post-filtering enabled'],
+          'Performance': ['Scales to 50M+ vectors', 'Sub-linear complexity O(log N)', 'GPU acceleration (optional)', 'Cache-friendly traversal'],
+          'Vectors': ['Property text: 768-dim', 'Property images: 2048-dim', 'User preferences: 128-dim']
+      }
+  },
+  'FullText': {
+      title: 'Full-Text BM25 Search',
+      type: 'Search Capability',
+      description: 'Keyword-based search with relevance ranking, typo tolerance, and synonym support',
+      metrics: {
+          'P95 Latency': '50-200ms',
+          'Features': 'Fuzzy matching, synonyms, stemming',
+          'Language': 'English analyzer'
+      },
+      details: {
+          'Capabilities': ['Typo tolerance (edit distance 2)', 'Stemming (running → run)', 'Stop words removal', 'Multi-field search'],
+          'Scoring': ['BM25 algorithm', 'Field boosting (title^3, description^1)', 'Proximity scoring', 'Custom score functions'],
+          'Optimization': ['Query cache (80% hit rate)', 'Request cache', 'Filter caching', 'Shard-level caching'],
+          'Examples': ['apartmnt → apartment', 'NYC → New York City', 'pool + gym (multi-term)']
+      }
+  },
+  'Aggregations': {
+      title: 'Aggregations & Facets',
+      type: 'Search Capability',
+      description: 'Real-time analytics and faceted search providing instant counts and distributions',
+      metrics: {
+          'P95 Latency': '100-300ms',
+          'Facets': '15+ dimensions',
+          'Cardinality': 'Up to 10,000 unique buckets'
+      },
+      details: {
+          'Facet Types': ['Terms (bedrooms, property type)', 'Range (price ranges)', 'Date histogram (listing date)', 'Nested (amenities)'],
+          'Common Facets': ['Price ranges ($0-500K, $500K-1M, etc)', 'Bedrooms (1, 2, 3, 4+)', 'Property type (condo, house, etc)', 'City/neighborhood', 'Square footage ranges'],
+          'Performance': ['Single query for all facets', 'Cached aggregations', 'Approximate cardinality (HyperLogLog)', 'Top-N optimization'],
+          'Use Cases': ['Filter sidebar', 'Search result stats', 'Market analytics', 'Price distribution charts']
+      }
+  },
+  'Prometheus': {
+      title: 'Prometheus',
+      type: 'Monitoring',
+      description: 'Time-series metrics collection system with powerful query language and alerting',
+      metrics: {
+          'Scrape Interval': '15 seconds',
+          'Retention': '30 days',
+          'Alert Evaluation': 'Every 30 seconds'
+      },
+      details: {
+          'Metrics Collected': ['Query latency (P50, P95, P99)', 'Throughput (QPS)', 'CPU/Memory/Disk usage', 'JVM heap usage', 'Error rates'],
+          'Alert Rules': ['P95 latency > 200ms', 'Cluster status RED', 'JVM heap > 85%', 'Disk usage > 90%', 'CDC lag > 10s'],
+          'Exporters': ['OpenSearch exporter', 'MySQL exporter', 'Kafka exporter', 'Node exporter (system metrics)'],
+          'Query Language': ['PromQL for complex queries', 'Histograms for percentiles', 'Rate calculations', 'Aggregations across labels']
+      }
+  },
+  'Grafana': {
+      title: 'Grafana Dashboards',
+      type: 'Monitoring',
+      description: 'Visualization platform displaying real-time metrics, alerts, and system health',
+      metrics: {
+          'Dashboards': '8 primary dashboards',
+          'Refresh': 'Every 30 seconds',
+          'Alerts': '15+ alert rules'
+      },
+      details: {
+          'Dashboards': ['OpenSearch Performance', 'Query Latency Analysis', 'Cluster Health Overview', 'CDC Pipeline Status', 'Business Metrics (CTR, conversion)', 'Infrastructure Resources', 'Error Rates & Logs', 'User Behavior Analytics'],
+          'Visualizations': ['Time-series graphs', 'Heatmaps', 'Stat panels', 'Gauge charts', 'Table panels'],
+          'Alerting': ['Slack integration', 'PagerDuty escalation', 'Email notifications', 'Alert grouping'],
+          'Access': ['Role-based access', 'Public dashboard (status page)', 'Mobile-responsive', 'Embeddable panels']
+      }
+  },
+  'S3': {
+      title: 'S3 Backups',
+      type: 'Backup & Recovery',
+      description: 'Automated daily backups of MySQL and OpenSearch with point-in-time recovery capability',
+      metrics: {
+          'Frequency': 'Daily at 2:00 AM UTC',
+          'Retention': '7 daily, 4 weekly, 3 monthly',
+          'Compression': 'gzip (60% reduction)'
+      },
+      details: {
+          'Backup Scope': ['MySQL full backup (mysqldump)', 'MySQL binlogs (incremental)', 'OpenSearch snapshots', 'Kafka topic offsets', 'Configuration files'],
+          'Recovery': ['MySQL: Point-in-time recovery (PITR)', 'OpenSearch: Index-level restore', 'Full restore time: 15-30 minutes', 'Partial restore: 5-10 minutes'],
+          'Testing': ['Monthly restore test to staging', 'Documented recovery procedures', 'RTO: 30 minutes', 'RPO: 5 minutes'],
+          'Storage': ['S3 Standard for recent (7d)', 'S3 Glacier for long-term', 'Versioning enabled', 'Server-side encryption (SSE-S3)']
+      }
+  }
+};
+
+// Aliases so replicas show details too
+Object.assign(componentData, {
+  API2: componentData.API1,
+  API3: componentData.API1,
+  Master2: componentData.Master1,
+  Master3: componentData.Master1,
+  Coord2: componentData.Coord1,
+  Data2: componentData.Data1,
+  Data3: componentData.Data1,
+  Data4: componentData.Data1
+});
+
+// Minimal entries for constraint/info boxes
+['MySQLConstraint','DebeziumConstraint','KafkaConstraint','MLConstraint','MasterConstraint',
+ 'CoordConstraint','IndexConstraint','VectorConstraint','FullTextConstraint','AggConstraint',
+ 'APIConstraint','MonitorConstraint','BackupConstraint'
+].forEach(k=>{
+  if(!componentData[k]){
+    componentData[k] = {
+      title: k.replace(/([A-Z])/g,' $1').trim(),
+      type: 'Constraint',
+      description: 'Service-level target or configuration constraint.',
+      metrics: {},
+      details: { Notes: ['Clicking highlights related edges; no extra metrics for this box.'] }
+    };
+  }
+});
+
+/* --- Rendering and interactivity --- */
+let currentNode = null;
+
+function renderGraph(){
+  const mount = document.getElementById('mermaidMount');
+  mermaid.render('hhxGraph', graphDef, (svgCode) => {
+    mount.innerHTML = svgCode;
+    bindInteractions();
+  }, mount);
+}
+
+function bindInteractions(){
+  const svg = document.querySelector('#mermaidMount svg');
+  const nodes = svg.querySelectorAll('.node');
+  const tooltip = document.getElementById('tooltip');
+
+  nodes.forEach(node=>{
+    const id = getNodeId(node);
+
+    node.addEventListener('mouseenter', (e)=>{
+      const data = componentData[id];
+      if(!data) return;
+      showTooltip(e, data);
+    });
+    node.addEventListener('mousemove', (e)=>{
+      tooltip.style.left = (e.clientX + 20) + 'px';
+      tooltip.style.top  = (e.clientY + 20) + 'px';
+    });
+    node.addEventListener('mouseleave', ()=>{
+      tooltip.classList.remove('show');
+    });
+
+    node.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      const data = componentData[id];
+      if(data){ showDetails(data); }
+      focusNode(node, id);
+    });
+  });
+
+  document.addEventListener('click', (e)=>{
+    if(!e.target.closest('.node') && !e.target.closest('.details-sidebar')){
+      resetView();
+    }
+  });
+}
+
+function getNodeId(nodeG){
+  // Mermaid uses ids like "flowchart-WebUsers-xxx"
+  const rawId = nodeG.id || '';
+  const m = rawId.match(/flowchart-([^-]+)-/);
+  if(m) return m[1];
+  const t = nodeG.querySelector('title');
+  return t ? t.textContent.replace(/\s+/g,'').replace(/[^\w]/g,'') : '';
+}
+
+function showTooltip(e, data){
+  const tooltip = document.getElementById('tooltip');
+  let metricsHtml = '';
+  for(const [k,v] of Object.entries(data.metrics || {})){
+    metricsHtml += `<div class="metric"><span>${k}:</span><span class="metric-value">${v}</span></div>`;
+  }
+  tooltip.innerHTML = `<h3>${data.title}</h3><p style="font-size:.85em;opacity:.9;">${data.description||''}</p>${metricsHtml}`;
+  tooltip.style.left = (e.clientX + 20) + 'px';
+  tooltip.style.top  = (e.clientY + 20) + 'px';
+  tooltip.classList.add('show');
+}
+
+function showDetails(data){
+  const sidebar = document.getElementById('detailsSidebar');
+  const content = document.getElementById('sidebarContent');
+
+  let html = `
+    <div class="sidebar-header">
+      <h2>${data.title}</h2>
+      <span class="component-type">${data.type||''}</span>
+      <p style="color:#666;font-size:.9em;margin-top:12px;line-height:1.5;">${data.description||''}</p>
+    </div>`;
+
+  if(data.metrics){
+    html += `<div class="sidebar-section"><h3>Key Metrics</h3>`;
+    for(const [k,v] of Object.entries(data.metrics)){
+      html += `<div class="metric-row"><span class="metric-label">${k}</span><span class="metric-value">${v}</span></div>`;
+    }
+    html += `</div>`;
+  }
+  if(data.details){
+    for(const [cat, items] of Object.entries(data.details)){
+      html += `<div class="sidebar-section"><h3>${cat}</h3><ul class="detail-list">${items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`;
+    }
+  }
+  content.innerHTML = html;
+  sidebar.classList.remove('hidden');
+}
+
+function focusNode(node, nodeId){
+  const svg = document.querySelector('#mermaidMount svg');
+
+  clearFocus();
+
+  svg.querySelectorAll('.node,.edgePath').forEach(el=>el.classList.add('dim'));
+
+  node.classList.remove('dim');
+  node.classList.add('focus');
+
+  const outEdges = svg.querySelectorAll(`.edgePath.LS-${CSS.escape(nodeId)}`);
+  outEdges.forEach(edge=>{
+    edge.classList.remove('dim');
+    edge.classList.add('edge-highlight','edge-animate');
+    const le = [...edge.classList].find(c=>c.startsWith('LE-'));
+    if(le){
+      const toId = le.slice(3);
+      const target = svg.querySelector(`[id^="flowchart-${CSS.escape(toId)}-"]`);
+      if(target) target.classList.remove('dim');
+    }
+  });
+
+  centerNodeInView(node);
+  currentNode = node;
+}
+
+function centerNodeInView(node){
+  const host = document.getElementById('scrollHost');
+  const nodeBox = node.getBoundingClientRect();
+  const hostBox = host.getBoundingClientRect();
+
+  const offsetX = (nodeBox.left + nodeBox.width/2) - (hostBox.left + hostBox.width/2);
+  const offsetY = (nodeBox.top + nodeBox.height/2) - (hostBox.top + hostBox.height/2);
+
+  host.scrollBy({left: offsetX, top: offsetY, behavior:'smooth'});
+}
+
+function clearFocus(){
+  const svg = document.querySelector('#mermaidMount svg');
+  if(!svg) return;
+  svg.querySelectorAll('.dim').forEach(el=>el.classList.remove('dim'));
+  svg.querySelectorAll('.focus').forEach(el=>el.classList.remove('focus'));
+  svg.querySelectorAll('.edge-highlight').forEach(el=>el.classList.remove('edge-highlight'));
+  svg.querySelectorAll('.edge-animate').forEach(el=>el.classList.remove('edge-animate'));
+}
+
+function resetView(){
+  clearFocus();
+  const tooltip = document.getElementById('tooltip');
+  tooltip.classList.remove('show');
+  currentNode = null;
+}
+
+function closeSidebar(){
+  document.getElementById('detailsSidebar').classList.add('hidden');
+  resetView();
+}
+function toggleSidebar(){
+  document.getElementById('detailsSidebar').classList.toggle('hidden');
+}
+
+/* Render once DOM is ready */
+document.addEventListener('DOMContentLoaded', ()=>{
+  renderGraph();
+  setTimeout(()=>{
+    const tip = document.querySelector('.instruction');
+    if(tip){ tip.style.opacity='0'; setTimeout(()=>tip.remove(), 300); }
+  }, 7000);
+});
+</script>
+</body>
+</html>
