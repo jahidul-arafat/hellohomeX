@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Multi-Tenant E-Ticketing Platform - Interactive Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#333;overflow:hidden}
+        header{position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px 30px;text-align:center;z-index:1000;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+        h1{font-size:2em;margin-bottom:5px}.subtitle{font-size:.9em;opacity:.9}
+        .container{display:flex;height:100vh}
+        .main-content{display:flex;width:100%;margin-top:100px;background:#fff}
+        .diagram-container{flex:1;overflow:auto;padding:30px;position:relative;background:#f8f9fa}
+        .diagram-wrapper{background:#fff;border-radius:12px;padding:30px;box-shadow:0 4px 20px rgba(0,0,0,.1);position:relative}
+        .details-sidebar{width:450px;background:#fff;border-left:3px solid #667eea;overflow-y:auto;padding:30px;box-shadow:-5px 0 20px rgba(0,0,0,.1);transition:transform .3s ease}
+        .details-sidebar.hidden{transform:translateX(100%)}
+        .sidebar-header{margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid #667eea}
+        .sidebar-header h2{color:#667eea;font-size:1.6em;margin-bottom:8px}
+        .component-type{display:inline-block;padding:4px 12px;background:#667eea;color:#fff;border-radius:12px;font-size:.75em;font-weight:600;text-transform:uppercase}
+        .sidebar-section{background:#f8f9fa;border-radius:8px;padding:18px;margin-bottom:18px;border-left:4px solid #667eea}
+        .sidebar-section h3{font-size:1.1em;margin-bottom:12px;color:#333;display:flex;align-items:center;gap:8px}
+        .sidebar-section h3:before{content:"▶";color:#667eea;font-size:.8em}
+        .metric-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #e0e0e0}
+        .metric-row:last-child{border-bottom:none}
+        .metric-label{color:#666;font-size:.9em;font-weight:500}
+        .metric-value{color:#667eea;font-weight:700;font-size:.9em}
+        .detail-list{list-style:none;padding:0}
+        .detail-list li{padding:8px 0;font-size:.9em;color:#555;padding-left:24px;position:relative;line-height:1.5}
+        .detail-list li:before{content:"→";position:absolute;left:0;color:#667eea;font-weight:bold;font-size:1.2em}
+        .close-sidebar{position:absolute;top:15px;right:15px;background:#f0f0f0;border:none;width:32px;height:32px;border-radius:50%;font-size:20px;cursor:pointer;color:#666;display:flex;align-items:center;justify-content:center;transition:all .2s}
+        .close-sidebar:hover{background:#667eea;color:#fff}
+        .controls{position:fixed;top:120px;right:20px;display:flex;flex-direction:column;gap:10px;z-index:100}
+        .control-btn{background:#fff;border:2px solid #667eea;width:45px;height:45px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;color:#667eea;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+        .control-btn:hover{background:#667eea;color:#fff;transform:scale(1.1)}
+        .flow-legend{position:fixed;bottom:20px;left:30px;background:#fff;padding:15px 20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,.2);z-index:100}
+        .flow-legend h4{margin-bottom:10px;color:#333;font-size:.9em}
+        .legend-items{display:flex;flex-direction:column;gap:8px}
+        .legend-item{display:flex;align-items:center;gap:10px;font-size:.85em}
+        .legend-line{width:40px;height:3px;border-radius:2px}
+        .legend-write{background:#ff6b6b}.legend-read{background:#4dabf7}.legend-cache{background:#ff922b}
+        .legend-monitor{background:#9775fa;background-image:repeating-linear-gradient(90deg,#9775fa,#9775fa 5px,transparent 5px,transparent 10px)}
+        .tooltip{position:fixed;background:rgba(0,0,0,.95);color:#fff;padding:12px 16px;border-radius:8px;max-width:320px;z-index:2000;pointer-events:none;opacity:0;transition:opacity .2s;font-size:.85em;box-shadow:0 8px 25px rgba(0,0,0,.3)}
+        .tooltip.show{opacity:1}
+        .tooltip h3{margin-bottom:8px;color:#67e;font-size:1.1em}
+        .tooltip .metric{display:flex;justify-content:space-between;margin:6px 0;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+        .tooltip .metric:last-child{border-bottom:none}
+        .tooltip .metric-value{color:#4CAF50;font-weight:600}
+        .mermaid svg{overflow:visible}
+        .node, .edgePath{transition:filter .2s, opacity .2s, transform .2s}
+        .dim{filter:blur(2px) opacity(.25)}
+        .focus{transform-box:fill-box;transform-origin:center center;transform:scale(1.05)}
+        .edge-highlight path{stroke:#4dabf7 !important;stroke-width:4px !important;filter:drop-shadow(0 0 6px rgba(77,171,247,.7))}
+        .edge-highlight marker path{fill:#4dabf7 !important}
+        .edge-animate path{stroke-dasharray:8 6;animation:dash 1.2s linear infinite}
+        @keyframes dash{to{stroke-dashoffset:-56}}
+        .instruction{position:fixed;bottom:20px;right:20px;background:#fff;padding:12px 18px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,.2);font-size:.85em;color:#666}
+        .instruction strong{color:#667eea}
+    </style>
+</head>
+<body>
+<header>
+    <h1>Multi-Tenant E-Ticketing Platform Architecture</h1>
+    <p class="subtitle">Bangladesh · 106 Tenants · Database-Per-Tenant Isolation · 99.95% Availability</p>
+    <p class="subtitle">Interactive Architecture Diagram — Click components for details</p>
+</header>
+
+<div class="controls">
+    <button class="control-btn" onclick="resetView()" title="Reset View">⟲</button>
+    <button class="control-btn" onclick="toggleSidebar()" title="Toggle Details">📋</button>
+</div>
+
+<div class="container">
+    <div class="main-content">
+        <div class="diagram-container" id="scrollHost">
+            <div class="diagram-wrapper" id="diagramWrapper">
+                <div id="mermaidMount" class="mermaid" aria-hidden="true"></div>
+            </div>
+        </div>
+
+        <aside class="details-sidebar hidden" id="detailsSidebar">
+            <button class="close-sidebar" onclick="closeSidebar()">×</button>
+            <div id="sidebarContent">
+                <div class="sidebar-header">
+                    <h2>Select a Component</h2>
+                    <p style="color:#666;font-size:.9em;margin-top:10px;">Click any component in the diagram to view detailed specifications</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<div class="flow-legend">
+    <h4>Data Flow Legend</h4>
+    <div class="legend-items">
+        <div class="legend-item"><div class="legend-line legend-write"></div><span>Write Operations</span></div>
+        <div class="legend-item"><div class="legend-line legend-read"></div><span>Read/Search Operations</span></div>
+        <div class="legend-item"><div class="legend-line legend-cache"></div><span>Cache Operations</span></div>
+        <div class="legend-item"><div class="legend-line legend-monitor"></div><span>Monitoring (Dashed)</span></div>
+    </div>
+</div>
+
+<div class="instruction"><strong>💡 Tip:</strong> Hover for quick info. Click to see detailed specs and data flows.</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+    if (typeof CSS === 'undefined' || typeof CSS.escape !== 'function') {
+        window.CSS = window.CSS || {};
+        CSS.escape = function(v){return String(v).replace(/[^a-zA-Z0-9_\-]/g, '\\$&');};
+    }
+
+    const graphDef = `
+graph TB
+  classDef userClass fill:#E1BEE7,stroke:#8E24AA,stroke-width:2px
+  classDef edgeClass fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+  classDef lbClass fill:#90CAF9,stroke:#1976D2,stroke-width:2px
+  classDef appClass fill:#81C784,stroke:#388E3C,stroke-width:2px
+  classDef cacheClass fill:#FFB74D,stroke:#F57C00,stroke-width:2px
+  classDef dbClass fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
+  classDef masterClass fill:#B39DDB,stroke:#673AB7,stroke-width:2px
+  classDef queueClass fill:#F8BBD0,stroke:#C2185B,stroke-width:2px
+  classDef osClass fill:#B2DFDB,stroke:#00796B,stroke-width:2px
+  classDef monitorClass fill:#FFCDD2,stroke:#C62828,stroke-width:2px
+  classDef paymentClass fill:#FFF9C4,stroke:#F57F17,stroke-width:2px
+  classDef securityClass fill:#FFEBEE,stroke:#D32F2F,stroke-width:2px
+
+  MobileUsers["📱 Mobile Users<br/>(92% traffic)<br/>3G/4G optimized"]
+  WebUsers["💻 Web Users<br/>(8% traffic)<br/>Desktop browsers"]
+
+  CloudFlare["🛡️ CloudFlare CDN + WAF<br/>Layer 1 Security<br/>DDoS Protection"]
+  WAFRules["✓ Rate Limit: 1000 req/min/IP<br/>Bot detection enabled<br/>TLS 1.3 enforced"]
+
+  ALB["⚖️ OCI Application Load Balancer<br/>SSL Termination<br/>Health Checks (30s)"]
+  ALBConfig["✓ Round-robin distribution<br/>Circuit breaker enabled<br/>WebSocket support"]
+
+  NextJS1["🎨 Next.js Frontend 1<br/>App Router + ISR"]
+  NextJS2["🎨 Next.js Frontend 2<br/>Bundle: <250KB"]
+  NextJSConfig["✓ Bengali/English i18n<br/>PWA enabled<br/>Edge caching (60s)"]
+
+  LaravelAPI1["🔷 Laravel API 1<br/>Octane + Swoole"]
+  LaravelAPI2["🔷 Laravel API 2<br/>4 vCPU, 8GB RAM"]
+  LaravelAPI3["🔷 Laravel API 3<br/>Auto-scale: 4-40"]
+  APIConfig["✓ JWT auth (RS256)<br/>RBAC enabled<br/>P95 latency: <500ms"]
+
+  RedisCluster["🔶 Redis Cluster<br/>6 nodes (3M + 3R)<br/>Sentinel HA"]
+  RedisConfig["✓ Tenant credentials (1h TTL)<br/>Session storage<br/>Rate limit counters"]
+
+  MasterDB["🗄️ Master Database<br/>PostgreSQL 16<br/>Tenant Registry Only"]
+  MasterConfig["✓ Tables: tenants, tenant_configs<br/>No operational data<br/>Encrypted credentials"]
+
+  TenantDB1["💾 Tenant DB 1<br/>PostgreSQL 16<br/>2 OCPU, 32GB"]
+  TenantDB2["💾 Tenant DB 2<br/>Complete isolation<br/>Independent backups"]
+  TenantDB106["💾 Tenant DB 106<br/>Multi-AZ standby<br/>Sync replication"]
+  DBConfig["✓ Tables: events, tickets, bookings<br/>Monthly partitioning<br/>JSONB configs"]
+
+  PgBouncer["🔀 PgBouncer<br/>Connection Pooling<br/>Transaction mode"]
+  PoolConfig["✓ 1000 app → 50 DB conns<br/>Query timeout: 30s<br/>Pool saturation alerts"]
+
+  Horizon1["⚙️ Horizon Worker 1<br/>Payment processing"]
+  Horizon2["⚙️ Horizon Worker 2<br/>PDF generation"]
+  Horizon3["⚙️ Horizon Worker 3<br/>Notifications"]
+  HorizonConfig["✓ Redis-backed queues<br/>Retry: exponential backoff<br/>Auto-scale: 2-20"]
+
+  OpenSearch["🔍 OpenSearch Cluster<br/>13 nodes (3M+2C+6D+2W)<br/>Hot-Warm-Cold tiers"]
+  OSConfig["✓ Full-text + ML search<br/>7-year audit logs (WORM)<br/>Bengali analyzer"]
+
+  OSMaster["⚙️ Master Nodes<br/>3x t3.medium<br/>Cluster state mgmt"]
+  OSCoord["🔀 Coordinating Nodes<br/>2x c6i.large<br/>Route & merge"]
+  OSData["💽 Data Nodes (Hot)<br/>6x r6i.xlarge, 500GB SSD<br/>Recent indices (0-90d)"]
+  OSWarm["💽 Data Nodes (Warm)<br/>3x r6i.large, 4TB HDD<br/>Older indices (90d-2y)"]
+
+  bKash["💳 bKash API<br/>Mobile Money<br/>50M+ users"]
+  Nagad["💳 Nagad API<br/>Mobile Money<br/>35M+ users"]
+  SSLCommerz["💳 SSL Commerz<br/>Card tokenization<br/>PCI-DSS Level 1"]
+  PaymentConfig["✓ Tokenization only<br/>No card data storage<br/>Circuit breaker (8s timeout)"]
+
+  NIDAPI["🆔 NID Verification API<br/>Election Commission<br/>Real-time validation"]
+  NIDConfig["✓ Circuit breaker (3s)<br/>Manual fallback queue<br/>Cache: 24h TTL"]
+
+  NewRelic["📊 New Relic APM<br/>100 hosts monitored<br/>Intelligent alerts"]
+  NewRelicConfig["✓ P95 latency tracking<br/>Baseline anomaly detection<br/>15-min alert aggregation"]
+
+  OCIVault["🔐 OCI Vault<br/>Key Management<br/>AES-256 encryption"]
+  VaultConfig["✓ Per-tenant keys<br/>90-day rotation<br/>Field-level encryption"]
+
+  OCIBackup["☁️ OCI Object Storage<br/>Automated backups<br/>Hot-Warm-Cold tiers"]
+  BackupConfig["✓ Hourly snapshots (24h)<br/>Daily backups (7d)<br/>WAL archiving (RPO: <5min)"]
+
+  MobileUsers --> CloudFlare
+  WebUsers --> CloudFlare
+  CloudFlare --- WAFRules
+  CloudFlare --> ALB
+  ALB --- ALBConfig
+
+  ALB --> NextJS1
+  ALB --> NextJS2
+  NextJS1 --- NextJSConfig
+  NextJS2 --- NextJSConfig
+
+  NextJS1 --> LaravelAPI1
+  NextJS2 --> LaravelAPI2
+  ALB --> LaravelAPI3
+  LaravelAPI1 --- APIConfig
+  LaravelAPI2 --- APIConfig
+  LaravelAPI3 --- APIConfig
+
+  LaravelAPI1 --> RedisCluster
+  LaravelAPI2 --> RedisCluster
+  LaravelAPI3 --> RedisCluster
+  RedisCluster --- RedisConfig
+
+  LaravelAPI1 --> MasterDB
+  LaravelAPI2 --> MasterDB
+  LaravelAPI3 --> MasterDB
+  MasterDB --- MasterConfig
+
+  RedisCluster --> PgBouncer
+  PgBouncer --- PoolConfig
+
+  PgBouncer --> TenantDB1
+  PgBouncer --> TenantDB2
+  PgBouncer --> TenantDB106
+  TenantDB1 --- DBConfig
+  TenantDB2 --- DBConfig
+  TenantDB106 --- DBConfig
+
+  LaravelAPI1 --> Horizon1
+  LaravelAPI2 --> Horizon2
+  LaravelAPI3 --> Horizon3
+  Horizon1 --- HorizonConfig
+  Horizon2 --- HorizonConfig
+  Horizon3 --- HorizonConfig
+
+  Horizon1 --> bKash
+  Horizon1 --> Nagad
+  Horizon1 --> SSLCommerz
+  bKash --- PaymentConfig
+  Nagad --- PaymentConfig
+  SSLCommerz --- PaymentConfig
+
+  LaravelAPI1 -.-> NIDAPI
+  NIDAPI --- NIDConfig
+
+  TenantDB1 --> OpenSearch
+  TenantDB2 --> OpenSearch
+  TenantDB106 --> OpenSearch
+  OpenSearch --- OSConfig
+
+  OpenSearch --> OSMaster
+  OpenSearch --> OSCoord
+  OpenSearch --> OSData
+  OpenSearch --> OSWarm
+
+  LaravelAPI1 --> OpenSearch
+  LaravelAPI2 --> OpenSearch
+  LaravelAPI3 --> OpenSearch
+
+  LaravelAPI1 -.-> NewRelic
+  LaravelAPI2 -.-> NewRelic
+  TenantDB1 -.-> NewRelic
+  OpenSearch -.-> NewRelic
+  NewRelic --- NewRelicConfig
+
+  TenantDB1 -.-> OCIVault
+  TenantDB2 -.-> OCIVault
+  OCIVault --- VaultConfig
+
+  TenantDB1 -.-> OCIBackup
+  TenantDB2 -.-> OCIBackup
+  TenantDB106 -.-> OCIBackup
+  OpenSearch -.-> OCIBackup
+  OCIBackup --- BackupConfig
+
+  class MobileUsers,WebUsers userClass
+  class CloudFlare,WAFRules securityClass
+  class ALB,ALBConfig lbClass
+  class NextJS1,NextJS2,NextJSConfig edgeClass
+  class LaravelAPI1,LaravelAPI2,LaravelAPI3,APIConfig appClass
+  class RedisCluster,RedisConfig cacheClass
+  class MasterDB,MasterConfig,TenantDB1,TenantDB2,TenantDB106,DBConfig dbClass
+  class PgBouncer,PoolConfig masterClass
+  class Horizon1,Horizon2,Horizon3,HorizonConfig queueClass
+  class OpenSearch,OSConfig,OSMaster,OSCoord,OSData,OSWarm osClass
+  class bKash,Nagad,SSLCommerz,PaymentConfig,NIDAPI,NIDConfig paymentClass
+  class NewRelic,NewRelicConfig,OCIVault,VaultConfig,OCIBackup,BackupConfig monitorClass
+`;
+
+    mermaid.initialize({
+        startOnLoad:false,
+        securityLevel:'loose',
+        theme:'base',
+        themeVariables:{fontSize:'13px',fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto'}
+    });
+
+    const componentData = {
+        "MobileUsers": {
+            "title": "Mobile Users (92% of Traffic)",
+            "type": "User Interface",
+            "description": "Primary user base accessing via mobile apps and PWA on 3G/4G networks across Bangladesh",
+            "metrics": {
+                "Daily Active Users": "50,000+",
+                "Avg Session": "6-8 minutes",
+                "Network": "3G (40%), 4G (58%), 5G (2%)",
+                "Page Load Target": "<3s on 3G"
+            },
+            "details": {
+                "Platforms": ["Android (70%)", "iOS (22%)", "PWA (8%)"],
+                "Optimizations": ["Bundle size <250KB", "WebP images", "Lazy loading", "Service worker caching"],
+                "Languages": ["Bengali (primary)", "English (secondary)"],
+                "Features": ["Offline ticket viewing", "bKash one-tap payment", "QR code scanning", "Push notifications"]
+            }
+        },
+        "WebUsers": {
+            "title": "Web Users (8% of Traffic)",
+            "type": "User Interface",
+            "description": "Desktop users accessing via browsers, primarily for complex searches and admin operations",
+            "metrics": {
+                "Primary Browsers": "Chrome (65%), Firefox (20%)",
+                "Avg Session": "12-15 minutes",
+                "Resolution": "1920x1080 (60%)",
+                "Admin Users": "~500 agents"
+            },
+            "details": {
+                "Use Cases": ["Complex property searches", "Admin dashboards", "Bulk operations", "Report generation"],
+                "Features": ["Advanced filters", "Multi-tab workflows", "Export capabilities", "Real-time analytics"],
+                "Performance": ["First Contentful Paint <1.2s", "Time to Interactive <3s", "Lighthouse score >90"]
+            }
+        },
+        "CloudFlare": {
+            "title": "CloudFlare CDN + WAF",
+            "type": "Edge Security (Layer 1)",
+            "description": "Global edge network providing DDoS protection, WAF, and CDN services with Singapore as closest edge location",
+            "metrics": {
+                "Edge Locations": "200+ globally",
+                "Latency to BD": "45-60ms (Singapore)",
+                "Cache Hit Rate": "89%",
+                "Blocked Attacks": "~2,300/day"
+            },
+            "details": {
+                "DDoS Protection": ["Layer 3/4 volumetric attacks", "Layer 7 application attacks", "Auto-mitigation >10 Gbps"],
+                "WAF Rules": ["SQL injection blocking", "XSS prevention", "Bot detection (ML-based)", "Rate limiting: 1000 req/min/IP"],
+                "CDN": ["Static assets (24h TTL)", "API responses (60s TTL)", "Bandwidth savings: 89%", "Compression: Brotli + gzip"],
+                "SSL/TLS": ["TLS 1.3 enforced", "HSTS enabled (1-year)", "Certificate auto-renewal", "0-RTT enabled"]
+            }
+        },
+        "ALB": {
+            "title": "OCI Application Load Balancer",
+            "type": "Infrastructure (Layer 2)",
+            "description": "Distributes traffic across API servers with SSL termination, health checks, and WebSocket support",
+            "metrics": {
+                "Algorithm": "Round-robin",
+                "Health Check": "Every 30 seconds",
+                "SSL Termination": "Yes (TLS 1.3)",
+                "Max Connections": "50,000+"
+            },
+            "details": {
+                "Features": ["Zero-downtime deployments", "Session persistence (sticky sessions)", "WebSocket support", "Custom health endpoints"],
+                "Health Checks": ["HTTP GET /health", "3 consecutive failures = remove", "Automatic reattachment", "Timeout: 5s"],
+                "Traffic Distribution": ["Primary AD: 70%", "Secondary AD: 30%", "Cross-AD failover <90s"],
+                "Security": ["Security lists integration", "Private subnet routing", "VCN isolation"]
+            }
+        },
+        "NextJS1": {
+            "title": "Next.js Frontend Server",
+            "type": "Application Layer",
+            "description": "React-based SSR/ISR frontend with App Router, optimized for Bangladesh's mobile-first context",
+            "metrics": {
+                "Bundle Size": "<250KB (gzipped)",
+                "Rendering": "ISR (60s revalidation)",
+                "Instances": "2-12 (auto-scale)",
+                "Memory": "4GB per instance"
+            },
+            "details": {
+                "Rendering Strategies": ["Landing page: SSG", "Event listings: ISR (60s)", "Event details: ISR (30s)", "User dashboard: SSR", "Checkout: Client-side"],
+                "Internationalization": ["next-intl for i18n", "Bengali number formatting", "RTL layout support (future)", "Locale detection from subdomain"],
+                "Performance": ["Code splitting (route-based)", "Image optimization (WebP)", "Font subsetting (Bengali)", "Prefetching"],
+                "PWA Features": ["Service worker", "Offline mode", "Background sync", "Add to home screen"]
+            }
+        },
+        "LaravelAPI1": {
+            "title": "Laravel API Server",
+            "type": "Application Layer",
+            "description": "PHP 8.3 API server with Laravel 12 + Octane, handling business logic and tenant resolution",
+            "metrics": {
+                "Instance": "c6i.large (2 vCPU, 4GB)",
+                "P95 Latency": "<500ms",
+                "Throughput": "847 → 3,420 req/s (Octane)",
+                "Auto-scale": "4-40 instances"
+            },
+            "details": {
+                "Core Features": ["Dynamic tenant resolution (subdomain)", "JWT authentication (RS256)", "RBAC with Laravel policies", "API rate limiting"],
+                "Octane Benefits": ["Persistent app state", "4× throughput improvement", "72% latency reduction", "Swoole coroutines for async I/O"],
+                "Endpoints": ["/api/v1/events (search)", "/api/v1/bookings (CRUD)", "/api/v1/payments (process)", "/api/v1/auth (JWT)"],
+                "Performance": ["Connection pooling", "Query optimization", "N+1 prevention", "Response caching"]
+            }
+        },
+        "RedisCluster": {
+            "title": "Redis Cluster with Sentinel",
+            "type": "Caching Layer",
+            "description": "Distributed cache with 6 nodes providing high availability and sub-millisecond latency",
+            "metrics": {
+                "Nodes": "6 (3 masters + 3 replicas)",
+                "Hit Rate": "80-90%",
+                "Latency": "<1ms (P95)",
+                "Throughput": "100,000+ ops/sec"
+            },
+            "details": {
+                "Data Structures": ["Strings (simple cache)", "Hashes (user sessions)", "Sets (rate limiting)", "Sorted Sets (leaderboards)"],
+                "Cache Strategy": ["Tenant credentials: 1h TTL", "Event listings: 60s TTL", "Ticket availability: 5s TTL", "Pricing rules: 30s TTL"],
+                "High Availability": ["Sentinel for failover", "Automatic master promotion", "Split-brain prevention", "Failover time <30s"],
+                "Persistence": ["RDB snapshots (5min)", "AOF with fsync (1s)", "RPO <1 minute"]
+            }
+        },
+        "MasterDB": {
+            "title": "Master Database (Tenant Registry)",
+            "type": "Database",
+            "description": "Central PostgreSQL 16 database storing ONLY tenant metadata and routing information",
+            "metrics": {
+                "Tables": "3 (tenants, tenant_configs, tenant_health)",
+                "Records": "~106 tenants",
+                "Query Time": "<50ms",
+                "ZERO Operational Data": "All bookings/payments in tenant DBs"
+            },
+            "details": {
+                "Tables": ["tenants (id, subdomain, db_credentials)", "tenant_configs (pricing_rules JSONB)", "tenant_health (monitoring data)"],
+                "Security": ["Credentials encrypted (AES-256)", "OCI Vault integration", "Row-Level Security policies", "Read-only replicas for reporting"],
+                "Isolation": ["No cross-tenant queries possible", "Each tenant = separate connection", "Credentials cached in Redis (1h)"],
+                "Configuration": ["2 OCPU, 16GB RAM", "Multi-AZ standby", "Automated backups", "Point-in-time recovery"]
+            }
+        },
+        "TenantDB1": {
+            "title": "Tenant Database (Complete Isolation)",
+            "type": "Database",
+            "description": "Dedicated PostgreSQL 16 instance per tenant with complete physical data separation",
+            "metrics": {
+                "Total Instances": "106 (one per tenant)",
+                "Typical Size": "2 OCPU, 32GB RAM",
+                "Storage": "500GB per tenant",
+                "Cost": "BDT 12,600/tenant/month"
+            },
+            "details": {
+                "Tables": ["events (JSONB metadata)", "tickets (inventory)", "bookings (monthly partitioned)", "payments (tokenized)", "audit_logs (7-year retention)"],
+                "Isolation Benefits": ["Zero cross-tenant exposure", "Independent scaling", "Tenant-specific optimization", "Isolated failure domains"],
+                "Partitioning": ["Bookings: monthly partitions", "Audit logs: quarterly partitions", "Automatic partition pruning", "Old partitions → cold storage"],
+                "Indexes": ["GIN indexes on JSONB", "BRIN indexes on timestamps", "Covering indexes", "Query optimization"]
+            }
+        },
+        "PgBouncer": {
+            "title": "PgBouncer Connection Pooler",
+            "type": "Database Proxy",
+            "description": "Transaction-mode connection pooling enabling 1000 app connections to share 50 DB connections",
+            "metrics": {
+                "Pool Mode": "Transaction",
+                "Max Client Conn": "1,000",
+                "Default Pool Size": "50 DB connections",
+                "Query Timeout": "30s"
+            },
+            "details": {
+                "Configuration": ["Transaction pooling mode", "Reserve pool: 10 connections", "Server idle timeout: 600s", "Max client wait: 5s"],
+                "Benefits": ["Reduce connection overhead", "Support 10,000+ concurrent users", "Memory efficiency", "Connection reuse"],
+                "Monitoring": ["Pool saturation alerts", "Wait time tracking", "Connection lifecycle metrics", "New Relic integration"],
+                "Performance": ["Connection establishment <5ms", "Transaction routing <1ms", "Automatic reconnection", "Query timeout protection"]
+            }
+        },
+        "Horizon1": {
+            "title": "Laravel Horizon Workers",
+            "type": "Background Processing",
+            "description": "Redis-backed queue workers processing payments, PDF generation, and notifications asynchronously",
+            "metrics": {
+                "Instances": "2-20 (auto-scale)",
+                "Throughput": "5,000+ jobs/hour",
+                "Retry Strategy": "Exponential backoff",
+                "Priority Queues": "3 (high/default/low)"
+            },
+            "details": {
+                "Job Types": ["Payment verification", "PDF ticket generation", "Email/SMS notifications", "Analytics aggregation"],
+                "Priorities": ["High: Payment processing", "Default: Notifications", "Low: Analytics", "Failed jobs tracking"],
+                "Reliability": ["Auto-retry on failure", "Dead letter queue", "Job timeout: 60s", "Max attempts: 4"],
+                "Monitoring": ["Horizon dashboard", "Queue depth alerts", "Processing time metrics", "Failed job notifications"]
+            }
+        },
+        "bKash": {
+            "title": "bKash Mobile Money API",
+            "type": "Payment Gateway",
+            "description": "Bangladesh's largest mobile financial service with 50M+ users for instant payments",
+            "metrics": {
+                "Users": "50M+ in Bangladesh",
+                "Market Share": "~60%",
+                "Success Rate": "99.5%",
+                "Avg Transaction Time": "8-15 seconds"
+            },
+            "details": {
+                "Integration": ["Merchant API", "Tokenization enabled", "Webhook callbacks", "Real-time status updates"],
+                "Features": ["One-tap payment", "QR code payment", "Payment links", "Refund support"],
+                "Circuit Breaker": ["Timeout: 8 seconds", "Threshold: 10 failures", "Manual queue fallback", "Automatic retry"],
+                "Compliance": ["PCI-DSS Level 1", "Bangladesh Bank regulated", "KYC verified", "Transaction limits enforced"]
+            }
+        },
+        "Nagad": {
+            "title": "Nagad Mobile Money API",
+            "type": "Payment Gateway",
+            "description": "Government-backed mobile money service with 35M+ users, growing rapidly",
+            "metrics": {
+                "Users": "35M+ in Bangladesh",
+                "Market Share": "~30%",
+                "Success Rate": "99.3%",
+                "Avg Transaction Time": "10-18 seconds"
+            },
+            "details": {
+                "Integration": ["REST API", "Tokenization", "Real-time callbacks", "Balance inquiry"],
+                "Features": ["Instant transfer", "QR payments", "Bill payments", "Cash-in/cash-out"],
+                "Security": ["2FA required", "Transaction PIN", "Session timeout", "Device binding"],
+                "Advantages": ["Government backing", "Lower fees", "Wide agent network", "Rural penetration"]
+            }
+        },
+        "SSLCommerz": {
+            "title": "SSL Commerz Payment Gateway",
+            "type": "Payment Gateway",
+            "description": "Bangladesh's largest payment gateway supporting cards, wallets, and bank transfers with PCI-DSS Level 1",
+            "metrics": {
+                "Payment Methods": "25+ options",
+                "Cards Supported": "Visa, Mastercard, Amex",
+                "Wallets": "bKash, Nagad, Rocket",
+                "Success Rate": "98.7%"
+            },
+            "details": {
+                "Features": ["Card tokenization (PCI-DSS)", "Hosted payment pages", "Direct API integration", "Subscription billing"],
+                "Security": ["No raw card data storage", "3D Secure (3DS2)", "Fraud detection", "PCI-DSS Level 1 certified"],
+                "Settlement": ["T+3 business days", "Auto-reconciliation", "Transaction reports", "Dispute management"],
+                "Integration": ["Redirect model", "Webhook notifications", "Sandbox testing", "Multi-currency support"]
+            }
+        },
+        "NIDAPI": {
+            "title": "NID Verification API",
+            "type": "Third-Party Integration",
+            "description": "Election Commission API for real-time National ID verification for security-sensitive venues",
+            "metrics": {
+                "Response Time": "500ms-5s (variable)",
+                "Failure Rate": "2-3% (peak hours)",
+                "Cache Duration": "24 hours",
+                "Timeout": "3 seconds"
+            },
+            "details": {
+                "Use Cases": ["Adult ticket verification", "Security clearance", "Age validation", "Identity confirmation"],
+                "Circuit Breaker": ["3-second timeout", "5 consecutive failures → open", "Manual fallback queue", "60s recovery attempt"],
+                "Fallback Strategy": ["Queue for manual verification", "Allow purchase, verify async", "Operator approval workflow", "Audit trail maintained"],
+                "Data Handling": ["NID encrypted (AES-256)", "Field-level encryption", "24h cache for repeat visitors", "Privacy-compliant storage"]
+            }
+        },
+        "OpenSearch": {
+            "title": "OpenSearch Cluster",
+            "type": "Search & Analytics",
+            "description": "13-node cluster providing full-text search, ML-powered analytics, and 7-year compliance audit logs",
+            "metrics": {
+                "Nodes": "13 (3M+2C+6D+2W)",
+                "Storage": "Hot: 3TB, Warm: 12TB, Cold: 16TB",
+                "Search Latency": "50-200ms (P95)",
+                "Indexing Rate": "1,000-5,000 docs/s"
+            },
+            "details": {
+                "Node Types": ["3 Master nodes (cluster mgmt)", "2 Coordinating nodes (routing)", "6 Data nodes hot (0-90d)", "2 Data nodes warm (90d-7y)"],
+                "Use Cases": ["Full-text event search", "Bengali language support", "ML demand forecasting", "Centralized log aggregation", "Audit trail (WORM)"],
+                "Features": ["ICU analysis (Bengali)", "HNSW vector search", "BM25 ranking", "Aggregations & facets", "Hot-warm-cold tiers"],
+                "Compliance": ["WORM storage (7-year)", "Immutable audit logs", "Cryptographic chain of custody", "Bangladesh Bank compliant"]
+            }
+        },
+        "OSMaster": {
+            "title": "OpenSearch Master Nodes",
+            "type": "Cluster Management",
+            "description": "3 dedicated master nodes managing cluster state, shard allocation, and index lifecycle",
+            "metrics": {
+                "Count": "3 nodes",
+                "Instance": "t3.medium (2 vCPU, 4GB)",
+                "Quorum": "Minimum 2 for decisions",
+                "Election": "Automatic on failure"
+            },
+            "details": {
+                "Responsibilities": ["Cluster state management", "Shard allocation", "Index creation/deletion", "Node failure detection"],
+                "High Availability": ["3-node quorum", "Split-brain prevention", "Automatic leader election", "Health monitoring"],
+                "Not Used For": ["Data storage", "Query execution", "Client requests", "Indexing operations"],
+                "Monitoring": ["Cluster health API", "Leader election metrics", "State change frequency", "Recovery operations"]
+            }
+        },
+        "OSCoord": {
+            "title": "OpenSearch Coordinating Nodes",
+            "type": "Query Routing",
+            "description": "Stateless nodes routing search requests and merging shard results",
+            "metrics": {
+                "Count": "2 nodes",
+                "Instance": "c6i.large (2 vCPU, 4GB)",
+                "Routing": "Round-robin",
+                "Result Merging": "Parallel aggregation"
+            },
+            "details": {
+                "Responsibilities": ["Route search requests", "Scatter-gather queries", "Merge shard results", "Reduce aggregations"],
+                "Performance": ["No data storage (stateless)", "Fast result merging", "Connection pooling", "Request caching"],
+                "Load Balancing": ["Health-aware routing", "Adaptive retry", "Circuit breaker", "Timeout management"],
+                "Optimization": ["Query cache enabled", "Response compression", "Keep-alive connections", "Async I/O"]
+            }
+        },
+        "OSData": {
+            "title": "OpenSearch Data Nodes (Hot)",
+            "type": "Search & Storage",
+            "description": "High-performance SSD storage for recent indices with fast query execution",
+            "metrics": {
+                "Count": "6 nodes",
+                "Instance": "r6i.xlarge (4 vCPU, 32GB, 500GB SSD)",
+                "Data Age": "0-90 days",
+                "Query Latency": "<200ms (P95)"
+            },
+            "details": {
+                "Storage": ["Primary shards", "Replica shards", "Inverted indexes", "Vector indexes (HNSW)"],
+                "Indexes": ["Events index (6 shards)", "Bookings index (partitioned)", "Audit logs (recent)", "Search history"],
+                "Performance": ["SSD for fast I/O", "JVM heap: 16GB", "Query cache", "Filter cache"],
+                "Monitoring": ["Heap usage (<75%)", "CPU utilization (<70%)", "Disk I/O", "Cache hit rate"]
+            }
+        },
+        "OSWarm": {
+            "title": "OpenSearch Data Nodes (Warm)",
+            "type": "Long-term Storage",
+            "description": "Cost-optimized HDD storage for older indices with acceptable query performance",
+            "metrics": {
+                "Count": "3 nodes",
+                "Instance": "r6i.large (4 vCPU, 32GB, 4TB HDD)",
+                "Data Age": "90 days - 7 years",
+                "Query Latency": "300-800ms"
+            },
+            "details": {
+                "Storage": ["Older audit logs", "Archived bookings", "Historical analytics", "Compliance data"],
+                "Cost Optimization": ["HDD vs SSD (75% cheaper)", "Higher compression", "Reduced replicas", "Fewer shards"],
+                "ILM Policies": ["Auto-migration at 90 days", "Compression enabled", "Force merge", "Read-only mode"],
+                "Compliance": ["7-year retention", "WORM enforcement", "Backup verification", "Restore testing"]
+            }
+        },
+        "NewRelic": {
+            "title": "New Relic APM & Infrastructure",
+            "type": "Observability",
+            "description": "Comprehensive monitoring with intelligent alerting and baseline anomaly detection",
+            "metrics": {
+                "Hosts Monitored": "100+",
+                "Metrics Collected": "25,000/minute",
+                "Alert Rules": "15+ active",
+                "Dashboards": "8 primary"
+            },
+            "details": {
+                "APM Monitoring": ["API latency (P50/P95/P99)", "Throughput (QPS)", "Error rates", "Transaction traces"],
+                "Infrastructure": ["CPU/Memory/Disk", "Network I/O", "Container metrics", "Database connections"],
+                "Intelligent Alerting": ["Baseline learning (7 days)", "Anomaly detection (3σ)", "Alert aggregation (15min)", "Correlation analysis"],
+                "Dashboards": ["Platform overview", "Per-tenant metrics", "SLA compliance", "Database performance", "Queue health", "Security events", "Business metrics", "User analytics"]
+            }
+        },
+        "OCIVault": {
+            "title": "OCI Vault (Key Management)",
+            "type": "Security",
+            "description": "Hardware Security Module (HSM) backed key management for encryption keys",
+            "metrics": {
+                "Keys Managed": "106+ tenant keys",
+                "Rotation": "Every 90 days",
+                "Encryption": "AES-256-GCM",
+                "FIPS 140-2": "Level 3 compliance"
+            },
+            "details": {
+                "Use Cases": ["Database credentials encryption", "Per-tenant encryption keys", "Payment token encryption", "Field-level encryption (NID)"],
+                "Key Hierarchy": ["Master key (HSM-backed)", "Per-tenant derived keys (HKDF)", "Automatic rotation", "Version management"],
+                "Access Control": ["Instance principal authentication", "IAM policies", "Audit logging", "Key usage tracking"],
+                "Compliance": ["PCI-DSS compliant", "Bangladesh Bank approved", "GDPR-ready", "SOC 2 certified"]
+            }
+        },
+        "OCIBackup": {
+            "title": "OCI Object Storage (Backups)",
+            "type": "Backup & Recovery",
+            "description": "Multi-tier backup storage with automated lifecycle management and cross-region replication",
+            "metrics": {
+                "RPO": "<5 minutes (WAL)",
+                "RTO": "<15 minutes (automated)",
+                "Retention": "7d/4w/3m tiers",
+                "Storage Cost": "BDT 8/GB → 0.8/GB (tiering)"
+            },
+            "details": {
+                "Backup Types": ["Hourly snapshots (24h retention)", "Daily full backup (7d)", "Weekly backup (4w)", "Monthly archive (3m)", "WAL continuous archiving"],
+                "Storage Tiers": ["Hot: Recent backups (7d)", "Cool: Weekly backups (4w)", "Cold: Monthly archives (3m)", "Archive: Compliance (7y)"],
+                "Verification": ["Monthly restore tests", "Automated validation", "Checksum verification", "RTO measurement"],
+                "Cross-Region": ["Weekly replication to Singapore", "Disaster recovery capability", "RTO: <8 hours (region failure)", "RPO: <4 hours (weekly snapshot)"]
+            }
+        }
+    };
+
+    // Copy configurations for similar components
+    Object.assign(componentData, {
+        NextJS2: componentData.NextJS1,
+        LaravelAPI2: componentData.LaravelAPI1,
+        LaravelAPI3: componentData.LaravelAPI1,
+        TenantDB2: componentData.TenantDB1,
+        TenantDB106: componentData.TenantDB1,
+        Horizon2: componentData.Horizon1,
+        Horizon3: componentData.Horizon1
+    });
+
+    // Add constraint boxes
+    ['WAFRules', 'ALBConfig', 'NextJSConfig', 'APIConfig', 'RedisConfig', 'MasterConfig',
+        'DBConfig', 'PoolConfig', 'HorizonConfig', 'OSConfig', 'PaymentConfig', 'NIDConfig',
+        'NewRelicConfig', 'VaultConfig', 'BackupConfig'].forEach(k => {
+        if (!componentData[k]) {
+            componentData[k] = {
+                title: k.replace(/([A-Z])/g, ' $1').trim(),
+                type: 'Configuration',
+                description: 'Service-level configuration and constraints',
+                metrics: {},
+                details: {
+                    Notes: ['Configuration box showing key parameters and requirements for the connected component']
+                }
+            };
+        }
+    });
+
+    let currentNode = null;
+
+    async function renderGraph() {
+        const mount = document.getElementById('mermaidMount');
+        try {
+            const { svg, bindFunctions } = await mermaid.render('architectureGraph', graphDef);
+            mount.innerHTML = svg;
+            if (typeof bindFunctions === 'function') bindFunctions(mount);
+            bindInteractions();
+        } catch (e) {
+            console.error('Mermaid render error:', e);
+            mount.innerHTML = '<p style="color:red;padding:20px;">Error rendering diagram. Please refresh the page.</p>';
+        }
+    }
+
+    function bindInteractions() {
+        const svg = document.querySelector('#mermaidMount svg');
+        if (!svg) return;
+
+        const nodes = svg.querySelectorAll('.node');
+        const tooltip = document.getElementById('tooltip');
+
+        nodes.forEach(node => {
+            const id = getNodeId(node);
+
+            node.addEventListener('mouseenter', (e) => {
+                const data = componentData[id];
+                if (!data) return;
+                showTooltip(e, data);
+            });
+
+            node.addEventListener('mousemove', (e) => {
+                tooltip.style.left = (e.clientX + 20) + 'px';
+                tooltip.style.top = (e.clientY + 20) + 'px';
+            });
+
+            node.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('show');
+            });
+
+            node.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const data = componentData[id];
+                if (data) {
+                    showDetails(data);
+                    focusNode(node, id);
+                }
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.node') && !e.target.closest('.details-sidebar')) {
+                resetView();
+            }
+        });
+    }
+
+    function getNodeId(nodeG) {
+        const rawId = nodeG.id || '';
+        const m = rawId.match(/flowchart-([^-]+)-/);
+        if (m) return m[1];
+        const t = nodeG.querySelector('title');
+        return t ? t.textContent.replace(/\s+/g, '').replace(/[^\w]/g, '') : '';
+    }
+
+    function showTooltip(e, data) {
+        const tooltip = document.getElementById('tooltip');
+        let metricsHtml = '';
+        for (const [k, v] of Object.entries(data.metrics || {})) {
+            metricsHtml += `<div class="metric"><span>${k}:</span><span class="metric-value">${v}</span></div>`;
+        }
+        tooltip.innerHTML = `<h3>${data.title}</h3><p style="font-size:.85em;opacity:.9;">${data.description || ''}</p>${metricsHtml}`;
+        tooltip.style.left = (e.clientX + 20) + 'px';
+        tooltip.style.top = (e.clientY + 20) + 'px';
+        tooltip.classList.add('show');
+    }
+
+    function showDetails(data) {
+        const sidebar = document.getElementById('detailsSidebar');
+        const content = document.getElementById('sidebarContent');
+
+        let html = `
+    <div class="sidebar-header">
+      <h2>${data.title}</h2>
+      <span class="component-type">${data.type || ''}</span>
+      <p style="color:#666;font-size:.9em;margin-top:12px;line-height:1.5;">${data.description || ''}</p>
+    </div>`;
+
+        if (data.metrics && Object.keys(data.metrics).length > 0) {
+            html += `<div class="sidebar-section"><h3>Key Metrics</h3>`;
+            for (const [k, v] of Object.entries(data.metrics)) {
+                html += `<div class="metric-row"><span class="metric-label">${k}</span><span class="metric-value">${v}</span></div>`;
+            }
+            html += `</div>`;
+        }
+
+        if (data.details) {
+            for (const [cat, items] of Object.entries(data.details)) {
+                html += `<div class="sidebar-section"><h3>${cat}</h3><ul class="detail-list">${items.map(i => `<li>${i}</li>`).join('')}</ul></div>`;
+            }
+        }
+
+        content.innerHTML = html;
+        sidebar.classList.remove('hidden');
+    }
+
+    function focusNode(node, nodeId) {
+        const svg = document.querySelector('#mermaidMount svg');
+        if (!svg) return;
+
+        clearFocus();
+
+        svg.querySelectorAll('.node,.edgePath').forEach(el => el.classList.add('dim'));
+
+        node.classList.remove('dim');
+        node.classList.add('focus');
+
+        const outEdges = svg.querySelectorAll(`.edgePath.LS-${CSS.escape(nodeId)}`);
+        outEdges.forEach(edge => {
+            edge.classList.remove('dim');
+            edge.classList.add('edge-highlight', 'edge-animate');
+            const le = [...edge.classList].find(c => c.startsWith('LE-'));
+            if (le) {
+                const toId = le.slice(3);
+                const target = svg.querySelector(`[id^="flowchart-${CSS.escape(toId)}-"]`);
+                if (target) target.classList.remove('dim');
+            }
+        });
+
+        centerNodeInView(node);
+        currentNode = node;
+    }
+
+    function centerNodeInView(node) {
+        const host = document.getElementById('scrollHost');
+        const nodeBox = node.getBoundingClientRect();
+        const hostBox = host.getBoundingClientRect();
+
+        const offsetX = (nodeBox.left + nodeBox.width / 2) - (hostBox.left + hostBox.width / 2);
+        const offsetY = (nodeBox.top + nodeBox.height / 2) - (hostBox.top + hostBox.height / 2);
+
+        host.scrollBy({ left: offsetX, top: offsetY, behavior: 'smooth' });
+    }
+
+    function clearFocus() {
+        const svg = document.querySelector('#mermaidMount svg');
+        if (!svg) return;
+        svg.querySelectorAll('.dim').forEach(el => el.classList.remove('dim'));
+        svg.querySelectorAll('.focus').forEach(el => el.classList.remove('focus'));
+        svg.querySelectorAll('.edge-highlight').forEach(el => el.classList.remove('edge-highlight'));
+        svg.querySelectorAll('.edge-animate').forEach(el => el.classList.remove('edge-animate'));
+    }
+
+    function resetView() {
+        clearFocus();
+        const tooltip = document.getElementById('tooltip');
+        tooltip.classList.remove('show');
+        currentNode = null;
+    }
+
+    function closeSidebar() {
+        document.getElementById('detailsSidebar').classList.add('hidden');
+        resetView();
+    }
+
+    function toggleSidebar() {
+        document.getElementById('detailsSidebar').classList.toggle('hidden');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        renderGraph();
+        setTimeout(() => {
+            const tip = document.querySelector('.instruction');
+            if (tip) {
+                tip.style.transition = 'opacity 0.3s';
+                tip.style.opacity = '0';
+                setTimeout(() => tip.remove(), 300);
+            }
+        }, 7000);
+    });
+</script>
+</body>
+</html>
