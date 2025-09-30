@@ -63,7 +63,7 @@
 <header>
     <h1>Multi-Tenant E-Ticketing Platform Architecture</h1>
     <p class="subtitle">Bangladesh · 106 Tenants · Database-Per-Tenant Isolation · 99.95% Availability</p>
-    <p class="subtitle">Interactive Architecture Diagram — Click components for details</p>
+    <p class="subtitle">Interactive Architecture Diagram — Click components for detailed specifications</p>
 </header>
 
 <div class="controls">
@@ -117,107 +117,99 @@ graph TB
   classDef lbClass fill:#90CAF9,stroke:#1976D2,stroke-width:2px
   classDef appClass fill:#81C784,stroke:#388E3C,stroke-width:2px
   classDef cacheClass fill:#FFB74D,stroke:#F57C00,stroke-width:2px
-  classDef dbClass fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
+  classDef dbClass fill:#C8E6C9,stroke:#388E3C,stroke-width:4px
   classDef masterClass fill:#B39DDB,stroke:#673AB7,stroke-width:2px
   classDef queueClass fill:#F8BBD0,stroke:#C2185B,stroke-width:2px
   classDef osClass fill:#B2DFDB,stroke:#00796B,stroke-width:2px
   classDef monitorClass fill:#FFCDD2,stroke:#C62828,stroke-width:2px
   classDef paymentClass fill:#FFF9C4,stroke:#F57F17,stroke-width:2px
-  classDef securityClass fill:#FFEBEE,stroke:#D32F2F,stroke-width:2px
+  classDef securityClass fill:#FFEBEE,stroke:#D32F2F,stroke-width:3px
 
   MobileUsers["📱 Mobile Users<br/>(92% traffic)<br/>3G/4G optimized"]
   WebUsers["💻 Web Users<br/>(8% traffic)<br/>Desktop browsers"]
+  AdminUsers["👤 Admin Agents<br/>(~500 users)<br/>CRUD operations"]
 
   CloudFlare["🛡️ CloudFlare CDN + WAF<br/>Layer 1 Security<br/>DDoS Protection"]
-  WAFRules["✓ Rate Limit: 1000 req/min/IP<br/>Bot detection enabled<br/>TLS 1.3 enforced"]
+  CFConfig["✓ Rate: 1000 req/min/IP<br/>Bot detection (ML)<br/>TLS 1.3 enforced<br/>Singapore edge (45ms)"]
 
-  ALB["⚖️ OCI Application Load Balancer<br/>SSL Termination<br/>Health Checks (30s)"]
-  ALBConfig["✓ Round-robin distribution<br/>Circuit breaker enabled<br/>WebSocket support"]
+  AWSWAF["🛡️ AWS WAF<br/>Layer 1.5 Security"]
+  WAFConfig["✓ OWASP Top 10<br/>SQL injection block<br/>XSS prevention"]
 
-  NextJS1["🎨 Next.js Frontend 1<br/>App Router + ISR"]
-  NextJS2["🎨 Next.js Frontend 2<br/>Bundle: <250KB"]
-  NextJSConfig["✓ Bengali/English i18n<br/>PWA enabled<br/>Edge caching (60s)"]
+  ALB["⚖️ OCI Load Balancer<br/>SSL Termination<br/>Health Checks"]
+  ALBConfig["✓ Round-robin + health<br/>WebSocket support<br/>Circuit breaker<br/>Check interval: 30s"]
 
-  LaravelAPI1["🔷 Laravel API 1<br/>Octane + Swoole"]
-  LaravelAPI2["🔷 Laravel API 2<br/>4 vCPU, 8GB RAM"]
-  LaravelAPI3["🔷 Laravel API 3<br/>Auto-scale: 4-40"]
-  APIConfig["✓ JWT auth (RS256)<br/>RBAC enabled<br/>P95 latency: <500ms"]
+  NextJS["🎨 Next.js Frontend<br/>App Router + ISR<br/>Bundle <250KB"]
+  NextJSConfig["✓ Bengali/English i18n<br/>PWA enabled<br/>Edge cache: 60s<br/>Font subset: 187KB"]
+
+  LaravelAPI["🔷 Laravel API<br/>Octane + Swoole<br/>4-40 instances"]
+  APIConfig["✓ JWT auth (RS256)<br/>RBAC enabled<br/>P95 latency <500ms<br/>4× throughput vs std"]
 
   RedisCluster["🔶 Redis Cluster<br/>6 nodes (3M + 3R)<br/>Sentinel HA"]
-  RedisConfig["✓ Tenant credentials (1h TTL)<br/>Session storage<br/>Rate limit counters"]
+  RedisConfig["✓ Hit rate: 80-90%<br/>Latency <1ms<br/>Failover <30s<br/>TTL: 5s-1h"]
 
-  MasterDB["🗄️ Master Database<br/>PostgreSQL 16<br/>Tenant Registry Only"]
-  MasterConfig["✓ Tables: tenants, tenant_configs<br/>No operational data<br/>Encrypted credentials"]
+  MasterDB["🗄️ Master Database<br/>PostgreSQL 16<br/>Registry ONLY"]
+  MasterConfig["✓ 3 tables, ~106 records<br/>NO operational data<br/>Credentials encrypted<br/>2 OCPU, 16GB RAM"]
+
+  PgBouncer["🔀 PgBouncer Pool<br/>Transaction Mode<br/>Connection Pooling"]
+  PoolConfig["✓ 1000 app → 50 DB<br/>Query timeout: 30s<br/>Idle timeout: 600s<br/>95% overhead reduction"]
 
   TenantDB1["💾 Tenant DB 1<br/>PostgreSQL 16<br/>2 OCPU, 32GB"]
-  TenantDB2["💾 Tenant DB 2<br/>Complete isolation<br/>Independent backups"]
-  TenantDB106["💾 Tenant DB 106<br/>Multi-AZ standby<br/>Sync replication"]
-  DBConfig["✓ Tables: events, tickets, bookings<br/>Monthly partitioning<br/>JSONB configs"]
+  TenantDB2["💾 Tenant DB 2<br/>Complete Isolation<br/>Independent Scaling"]
+  TenantDB106["💾 Tenant DB 106<br/>Multi-AZ Standby<br/>Sync Replication"]
+  DBConfig["✓ JSONB configs<br/>Monthly partitions<br/>MVCC concurrency<br/>Independent backups"]
 
-  PgBouncer["🔀 PgBouncer<br/>Connection Pooling<br/>Transaction mode"]
-  PoolConfig["✓ 1000 app → 50 DB conns<br/>Query timeout: 30s<br/>Pool saturation alerts"]
-
-  Horizon1["⚙️ Horizon Worker 1<br/>Payment processing"]
-  Horizon2["⚙️ Horizon Worker 2<br/>PDF generation"]
-  Horizon3["⚙️ Horizon Worker 3<br/>Notifications"]
-  HorizonConfig["✓ Redis-backed queues<br/>Retry: exponential backoff<br/>Auto-scale: 2-20"]
-
-  OpenSearch["🔍 OpenSearch Cluster<br/>13 nodes (3M+2C+6D+2W)<br/>Hot-Warm-Cold tiers"]
-  OSConfig["✓ Full-text + ML search<br/>7-year audit logs (WORM)<br/>Bengali analyzer"]
-
-  OSMaster["⚙️ Master Nodes<br/>3x t3.medium<br/>Cluster state mgmt"]
-  OSCoord["🔀 Coordinating Nodes<br/>2x c6i.large<br/>Route & merge"]
-  OSData["💽 Data Nodes (Hot)<br/>6x r6i.xlarge, 500GB SSD<br/>Recent indices (0-90d)"]
-  OSWarm["💽 Data Nodes (Warm)<br/>3x r6i.large, 4TB HDD<br/>Older indices (90d-2y)"]
+  Horizon["⚙️ Horizon Workers<br/>2-20 instances<br/>Background Jobs"]
+  HorizonConfig["✓ Payment processing<br/>PDF generation<br/>Email/SMS<br/>Exponential backoff"]
 
   bKash["💳 bKash API<br/>Mobile Money<br/>50M+ users"]
   Nagad["💳 Nagad API<br/>Mobile Money<br/>35M+ users"]
-  SSLCommerz["💳 SSL Commerz<br/>Card tokenization<br/>PCI-DSS Level 1"]
-  PaymentConfig["✓ Tokenization only<br/>No card data storage<br/>Circuit breaker (8s timeout)"]
+  SSLCommerz["💳 SSL Commerz<br/>Card Gateway<br/>PCI-DSS Level 1"]
+  PaymentConfig["✓ Tokenization ONLY<br/>Zero card data storage<br/>Circuit breaker: 8s<br/>Webhook callbacks"]
 
-  NIDAPI["🆔 NID Verification API<br/>Election Commission<br/>Real-time validation"]
-  NIDConfig["✓ Circuit breaker (3s)<br/>Manual fallback queue<br/>Cache: 24h TTL"]
+  NIDAPI["🆔 NID Verification<br/>Election Commission<br/>Real-time Validation"]
+  NIDConfig["✓ Timeout: 3s<br/>Manual fallback queue<br/>Cache: 24h TTL<br/>Field encryption"]
 
-  NewRelic["📊 New Relic APM<br/>100 hosts monitored<br/>Intelligent alerts"]
-  NewRelicConfig["✓ P95 latency tracking<br/>Baseline anomaly detection<br/>15-min alert aggregation"]
+  OpenSearch["🔍 OpenSearch Cluster<br/>13 nodes total<br/>Hot-Warm-Cold Tiers"]
+  OSConfig["✓ Bengali full-text<br/>7-year WORM logs<br/>ML demand forecasting<br/>Compliance ready"]
 
-  OCIVault["🔐 OCI Vault<br/>Key Management<br/>AES-256 encryption"]
-  VaultConfig["✓ Per-tenant keys<br/>90-day rotation<br/>Field-level encryption"]
+  OSMaster["⚙️ Master Nodes<br/>3x t3.medium<br/>Cluster Management"]
+  OSCoord["🔀 Coordinating Nodes<br/>2x c6i.large<br/>Route & Merge"]
+  OSHot["💽 Data Nodes (Hot)<br/>6x r6i.xlarge<br/>0-90 days, 500GB SSD"]
+  OSWarm["💽 Data Nodes (Warm)<br/>3x r6i.large<br/>90d-2y, 4TB HDD"]
+  OSCold["❄️ Cold Storage<br/>S3 Glacier<br/>2-7 years"]
 
-  OCIBackup["☁️ OCI Object Storage<br/>Automated backups<br/>Hot-Warm-Cold tiers"]
-  BackupConfig["✓ Hourly snapshots (24h)<br/>Daily backups (7d)<br/>WAL archiving (RPO: <5min)"]
+  NewRelic["📊 New Relic APM<br/>100+ hosts<br/>Real-time Monitoring"]
+  NewRelicConfig["✓ P95 latency tracking<br/>Anomaly detection (3σ)<br/>15-min aggregation<br/>Distributed tracing"]
+
+  OCIVault["🔐 OCI Vault<br/>Key Management<br/>HSM-backed"]
+  VaultConfig["✓ AES-256-GCM<br/>90-day rotation<br/>Per-tenant keys<br/>FIPS 140-2 Level 3"]
+
+  OCIBackup["☁️ OCI Object Storage<br/>Hot-Warm-Cold Tiers<br/>Automated Backups"]
+  BackupConfig["✓ RPO <5min (WAL)<br/>RTO <15min (failover)<br/>7-year retention<br/>Cross-region (SG)"]
 
   MobileUsers --> CloudFlare
   WebUsers --> CloudFlare
-  CloudFlare --- WAFRules
-  CloudFlare --> ALB
+  AdminUsers --> CloudFlare
+  CloudFlare --- CFConfig
+  CloudFlare --> AWSWAF
+  AWSWAF --- WAFConfig
+  AWSWAF --> ALB
   ALB --- ALBConfig
 
-  ALB --> NextJS1
-  ALB --> NextJS2
-  NextJS1 --- NextJSConfig
-  NextJS2 --- NextJSConfig
+  ALB --> NextJS
+  ALB --> LaravelAPI
+  NextJS --- NextJSConfig
+  LaravelAPI --- APIConfig
 
-  NextJS1 --> LaravelAPI1
-  NextJS2 --> LaravelAPI2
-  ALB --> LaravelAPI3
-  LaravelAPI1 --- APIConfig
-  LaravelAPI2 --- APIConfig
-  LaravelAPI3 --- APIConfig
-
-  LaravelAPI1 --> RedisCluster
-  LaravelAPI2 --> RedisCluster
-  LaravelAPI3 --> RedisCluster
+  NextJS --> LaravelAPI
+  LaravelAPI --> RedisCluster
   RedisCluster --- RedisConfig
 
-  LaravelAPI1 --> MasterDB
-  LaravelAPI2 --> MasterDB
-  LaravelAPI3 --> MasterDB
+  LaravelAPI --> MasterDB
   MasterDB --- MasterConfig
 
-  RedisCluster --> PgBouncer
+  LaravelAPI --> PgBouncer
   PgBouncer --- PoolConfig
-
   PgBouncer --> TenantDB1
   PgBouncer --> TenantDB2
   PgBouncer --> TenantDB106
@@ -225,39 +217,29 @@ graph TB
   TenantDB2 --- DBConfig
   TenantDB106 --- DBConfig
 
-  LaravelAPI1 --> Horizon1
-  LaravelAPI2 --> Horizon2
-  LaravelAPI3 --> Horizon3
-  Horizon1 --- HorizonConfig
-  Horizon2 --- HorizonConfig
-  Horizon3 --- HorizonConfig
-
-  Horizon1 --> bKash
-  Horizon1 --> Nagad
-  Horizon1 --> SSLCommerz
+  LaravelAPI --> Horizon
+  Horizon --- HorizonConfig
+  Horizon --> bKash
+  Horizon --> Nagad
+  Horizon --> SSLCommerz
   bKash --- PaymentConfig
   Nagad --- PaymentConfig
   SSLCommerz --- PaymentConfig
 
-  LaravelAPI1 -.-> NIDAPI
+  LaravelAPI -.-> NIDAPI
   NIDAPI --- NIDConfig
 
-  TenantDB1 --> OpenSearch
-  TenantDB2 --> OpenSearch
-  TenantDB106 --> OpenSearch
+  LaravelAPI --> OpenSearch
+  TenantDB1 -.-> OpenSearch
+  TenantDB2 -.-> OpenSearch
   OpenSearch --- OSConfig
-
   OpenSearch --> OSMaster
   OpenSearch --> OSCoord
-  OpenSearch --> OSData
+  OpenSearch --> OSHot
   OpenSearch --> OSWarm
+  OSWarm --> OSCold
 
-  LaravelAPI1 --> OpenSearch
-  LaravelAPI2 --> OpenSearch
-  LaravelAPI3 --> OpenSearch
-
-  LaravelAPI1 -.-> NewRelic
-  LaravelAPI2 -.-> NewRelic
+  LaravelAPI -.-> NewRelic
   TenantDB1 -.-> NewRelic
   OpenSearch -.-> NewRelic
   NewRelic --- NewRelicConfig
@@ -272,17 +254,17 @@ graph TB
   OpenSearch -.-> OCIBackup
   OCIBackup --- BackupConfig
 
-  class MobileUsers,WebUsers userClass
-  class CloudFlare,WAFRules securityClass
+  class MobileUsers,WebUsers,AdminUsers userClass
+  class CloudFlare,CFConfig,AWSWAF,WAFConfig securityClass
   class ALB,ALBConfig lbClass
-  class NextJS1,NextJS2,NextJSConfig edgeClass
-  class LaravelAPI1,LaravelAPI2,LaravelAPI3,APIConfig appClass
+  class NextJS,NextJSConfig edgeClass
+  class LaravelAPI,APIConfig appClass
   class RedisCluster,RedisConfig cacheClass
-  class MasterDB,MasterConfig,TenantDB1,TenantDB2,TenantDB106,DBConfig dbClass
-  class PgBouncer,PoolConfig masterClass
-  class Horizon1,Horizon2,Horizon3,HorizonConfig queueClass
-  class OpenSearch,OSConfig,OSMaster,OSCoord,OSData,OSWarm osClass
+  class MasterDB,MasterConfig,PgBouncer,PoolConfig masterClass
+  class TenantDB1,TenantDB2,TenantDB106,DBConfig dbClass
+  class Horizon,HorizonConfig queueClass
   class bKash,Nagad,SSLCommerz,PaymentConfig,NIDAPI,NIDConfig paymentClass
+  class OpenSearch,OSConfig,OSMaster,OSCoord,OSHot,OSWarm,OSCold osClass
   class NewRelic,NewRelicConfig,OCIVault,VaultConfig,OCIBackup,BackupConfig monitorClass
 `;
 
@@ -306,9 +288,9 @@ graph TB
             },
             "details": {
                 "Platforms": ["Android (70%)", "iOS (22%)", "PWA (8%)"],
-                "Optimizations": ["Bundle size <250KB", "WebP images", "Lazy loading", "Service worker caching"],
-                "Languages": ["Bengali (primary)", "English (secondary)"],
-                "Features": ["Offline ticket viewing", "bKash one-tap payment", "QR code scanning", "Push notifications"]
+                "Optimizations": ["Bundle size <250KB", "WebP images", "Lazy loading", "Service worker caching", "Offline ticket viewing"],
+                "Languages": ["Bengali (primary)", "English (secondary)", "Noto Sans Bengali font subset"],
+                "Features": ["bKash one-tap payment", "QR code scanning", "Push notifications", "Background sync"]
             }
         },
         "WebUsers": {
@@ -322,9 +304,24 @@ graph TB
                 "Admin Users": "~500 agents"
             },
             "details": {
-                "Use Cases": ["Complex property searches", "Admin dashboards", "Bulk operations", "Report generation"],
+                "Use Cases": ["Complex searches", "Admin dashboards", "Bulk operations", "Report generation"],
                 "Features": ["Advanced filters", "Multi-tab workflows", "Export capabilities", "Real-time analytics"],
                 "Performance": ["First Contentful Paint <1.2s", "Time to Interactive <3s", "Lighthouse score >90"]
+            }
+        },
+        "AdminUsers": {
+            "title": "Admin / Agent Users",
+            "type": "User Interface",
+            "description": "Property managers and real estate agents using admin dashboard for tenant management",
+            "metrics": {
+                "Total Users": "~500 agents",
+                "Operations": "CRUD on all resources",
+                "Access Level": "Role-based (RBAC)"
+            },
+            "details": {
+                "Capabilities": ["Add/edit/delete events", "Manage bookings", "View analytics", "Bulk operations", "User management"],
+                "Features": ["Multi-event upload", "Performance dashboards", "Lead tracking", "Revenue reports"],
+                "Security": ["SSO integration", "RBAC with policies", "Audit logging", "2FA required", "Session timeout"]
             }
         },
         "CloudFlare": {
@@ -338,10 +335,25 @@ graph TB
                 "Blocked Attacks": "~2,300/day"
             },
             "details": {
-                "DDoS Protection": ["Layer 3/4 volumetric attacks", "Layer 7 application attacks", "Auto-mitigation >10 Gbps"],
+                "DDoS Protection": ["Layer 3/4 volumetric attacks", "Layer 7 application attacks", "Auto-mitigation >10 Gbps", "Tested: 47 Gbps attack blocked Q1 2024"],
                 "WAF Rules": ["SQL injection blocking", "XSS prevention", "Bot detection (ML-based)", "Rate limiting: 1000 req/min/IP"],
                 "CDN": ["Static assets (24h TTL)", "API responses (60s TTL)", "Bandwidth savings: 89%", "Compression: Brotli + gzip"],
                 "SSL/TLS": ["TLS 1.3 enforced", "HSTS enabled (1-year)", "Certificate auto-renewal", "0-RTT enabled"]
+            }
+        },
+        "AWSWAF": {
+            "title": "AWS WAF (Additional Layer)",
+            "type": "Security (Layer 1.5)",
+            "description": "Additional Web Application Firewall layer for OWASP Top 10 protection and advanced filtering",
+            "metrics": {
+                "Rule Sets": "OWASP Top 10",
+                "Custom Rules": "15+ active",
+                "False Positive Rate": "<2%"
+            },
+            "details": {
+                "Protection": ["SQL injection", "Cross-site scripting (XSS)", "Local file inclusion", "Remote code execution"],
+                "Features": ["IP reputation filtering", "Geo-blocking capabilities", "Rate-based rules", "Custom rule groups"],
+                "Integration": ["CloudFlare → AWS WAF → ALB", "Dual WAF for defense-in-depth", "Logs to S3 for analysis"]
             }
         },
         "ALB": {
@@ -361,7 +373,7 @@ graph TB
                 "Security": ["Security lists integration", "Private subnet routing", "VCN isolation"]
             }
         },
-        "NextJS1": {
+        "NextJS": {
             "title": "Next.js Frontend Server",
             "type": "Application Layer",
             "description": "React-based SSR/ISR frontend with App Router, optimized for Bangladesh's mobile-first context",
@@ -374,11 +386,11 @@ graph TB
             "details": {
                 "Rendering Strategies": ["Landing page: SSG", "Event listings: ISR (60s)", "Event details: ISR (30s)", "User dashboard: SSR", "Checkout: Client-side"],
                 "Internationalization": ["next-intl for i18n", "Bengali number formatting", "RTL layout support (future)", "Locale detection from subdomain"],
-                "Performance": ["Code splitting (route-based)", "Image optimization (WebP)", "Font subsetting (Bengali)", "Prefetching"],
+                "Performance": ["Code splitting (route-based)", "Image optimization (WebP)", "Font subsetting (Bengali 187KB)", "Prefetching"],
                 "PWA Features": ["Service worker", "Offline mode", "Background sync", "Add to home screen"]
             }
         },
-        "LaravelAPI1": {
+        "LaravelAPI": {
             "title": "Laravel API Server",
             "type": "Application Layer",
             "description": "PHP 8.3 API server with Laravel 12 + Octane, handling business logic and tenant resolution",
@@ -413,37 +425,20 @@ graph TB
             }
         },
         "MasterDB": {
-            "title": "Master Database (Tenant Registry)",
+            "title": "Master Database (PostgreSQL 16)",
             "type": "Database",
-            "description": "Central PostgreSQL 16 database storing ONLY tenant metadata and routing information",
+            "description": "Central registry storing ONLY tenant metadata and routing information - zero operational data",
             "metrics": {
                 "Tables": "3 (tenants, tenant_configs, tenant_health)",
                 "Records": "~106 tenants",
                 "Query Time": "<50ms",
-                "ZERO Operational Data": "All bookings/payments in tenant DBs"
+                "Technology": "PostgreSQL 16"
             },
             "details": {
                 "Tables": ["tenants (id, subdomain, db_credentials)", "tenant_configs (pricing_rules JSONB)", "tenant_health (monitoring data)"],
                 "Security": ["Credentials encrypted (AES-256)", "OCI Vault integration", "Row-Level Security policies", "Read-only replicas for reporting"],
                 "Isolation": ["No cross-tenant queries possible", "Each tenant = separate connection", "Credentials cached in Redis (1h)"],
                 "Configuration": ["2 OCPU, 16GB RAM", "Multi-AZ standby", "Automated backups", "Point-in-time recovery"]
-            }
-        },
-        "TenantDB1": {
-            "title": "Tenant Database (Complete Isolation)",
-            "type": "Database",
-            "description": "Dedicated PostgreSQL 16 instance per tenant with complete physical data separation",
-            "metrics": {
-                "Total Instances": "106 (one per tenant)",
-                "Typical Size": "2 OCPU, 32GB RAM",
-                "Storage": "500GB per tenant",
-                "Cost": "BDT 12,600/tenant/month"
-            },
-            "details": {
-                "Tables": ["events (JSONB metadata)", "tickets (inventory)", "bookings (monthly partitioned)", "payments (tokenized)", "audit_logs (7-year retention)"],
-                "Isolation Benefits": ["Zero cross-tenant exposure", "Independent scaling", "Tenant-specific optimization", "Isolated failure domains"],
-                "Partitioning": ["Bookings: monthly partitions", "Audit logs: quarterly partitions", "Automatic partition pruning", "Old partitions → cold storage"],
-                "Indexes": ["GIN indexes on JSONB", "BRIN indexes on timestamps", "Covering indexes", "Query optimization"]
             }
         },
         "PgBouncer": {
@@ -463,7 +458,56 @@ graph TB
                 "Performance": ["Connection establishment <5ms", "Transaction routing <1ms", "Automatic reconnection", "Query timeout protection"]
             }
         },
-        "Horizon1": {
+        "TenantDB1": {
+            "title": "Tenant Database (PostgreSQL 16)",
+            "type": "Database",
+            "description": "Dedicated PostgreSQL 16 instance per tenant with complete physical data separation",
+            "metrics": {
+                "Total Instances": "106 (one per tenant)",
+                "Typical Size": "2 OCPU, 32GB RAM",
+                "Storage": "500GB per tenant",
+                "Cost": "BDT 12,600/tenant/month"
+            },
+            "details": {
+                "Tables": ["events (JSONB metadata)", "tickets (inventory)", "bookings (monthly partitioned)", "payments (tokenized)", "audit_logs (7-year retention)"],
+                "Isolation Benefits": ["Zero cross-tenant exposure", "Independent scaling", "Tenant-specific optimization", "Isolated failure domains"],
+                "Partitioning": ["Bookings: monthly partitions", "Audit logs: quarterly partitions", "Automatic partition pruning", "Old partitions → cold storage"],
+                "Indexes": ["GIN indexes on JSONB", "BRIN indexes on timestamps", "Covering indexes", "Query optimization"]
+            }
+        },
+        "TenantDB2": {
+            "title": "Tenant Database (PostgreSQL 16)",
+            "type": "Database",
+            "description": "Dedicated PostgreSQL 16 instance with complete isolation from all other tenants",
+            "metrics": {
+                "Instance Type": "2-4 OCPU (tier-based)",
+                "RAM": "32-64GB",
+                "IOPS": "3,000-10,000",
+                "Backup": "Hourly + continuous WAL"
+            },
+            "details": {
+                "Technology Choice": ["PostgreSQL over MySQL", "44× faster JSONB queries", "Better MVCC concurrency", "Bengali full-text search"],
+                "Performance": ["Sub-50ms writes (P95)", "80-120ms queries (P95)", "Connection pooling via PgBouncer", "Read replicas for reports"],
+                "Security": ["AES-256 TDE", "Field-level NID encryption", "Row-Level Security", "Encrypted backups"]
+            }
+        },
+        "TenantDB106": {
+            "title": "Tenant Database 106",
+            "type": "Database",
+            "description": "Last of 106 isolated tenant databases with Multi-AZ standby for high availability",
+            "metrics": {
+                "Replication": "Synchronous to standby",
+                "RPO": "<5 minutes",
+                "RTO": "<15 minutes",
+                "Failover": "Automated via Patroni"
+            },
+            "details": {
+                "Multi-AZ": ["Primary in AD-1", "Standby in AD-2", "Sync replication", "Automatic failover (30-45s)"],
+                "Disaster Recovery": ["Hourly snapshots", "Daily backups", "Weekly cross-region", "Monthly restore tests"],
+                "Monitoring": ["Connection pool saturation", "Query latency", "Replication lag", "Disk usage"]
+            }
+        },
+        "Horizon": {
             "title": "Laravel Horizon Workers",
             "type": "Background Processing",
             "description": "Redis-backed queue workers processing payments, PDF generation, and notifications asynchronously",
@@ -554,14 +598,14 @@ graph TB
             "description": "13-node cluster providing full-text search, ML-powered analytics, and 7-year compliance audit logs",
             "metrics": {
                 "Nodes": "13 (3M+2C+6D+2W)",
-                "Storage": "Hot: 3TB, Warm: 12TB, Cold: 16TB",
+                "Storage": "Hot: 3TB, Warm: 12TB",
                 "Search Latency": "50-200ms (P95)",
                 "Indexing Rate": "1,000-5,000 docs/s"
             },
             "details": {
                 "Node Types": ["3 Master nodes (cluster mgmt)", "2 Coordinating nodes (routing)", "6 Data nodes hot (0-90d)", "2 Data nodes warm (90d-7y)"],
                 "Use Cases": ["Full-text event search", "Bengali language support", "ML demand forecasting", "Centralized log aggregation", "Audit trail (WORM)"],
-                "Features": ["ICU analysis (Bengali)", "HNSW vector search", "BM25 ranking", "Aggregations & facets", "Hot-warm-cold tiers"],
+                "Features": ["ICU analysis (Bengali)", "BM25 ranking", "Aggregations & facets", "Hot-warm-cold tiers"],
                 "Compliance": ["WORM storage (7-year)", "Immutable audit logs", "Cryptographic chain of custody", "Bangladesh Bank compliant"]
             }
         },
@@ -578,8 +622,7 @@ graph TB
             "details": {
                 "Responsibilities": ["Cluster state management", "Shard allocation", "Index creation/deletion", "Node failure detection"],
                 "High Availability": ["3-node quorum", "Split-brain prevention", "Automatic leader election", "Health monitoring"],
-                "Not Used For": ["Data storage", "Query execution", "Client requests", "Indexing operations"],
-                "Monitoring": ["Cluster health API", "Leader election metrics", "State change frequency", "Recovery operations"]
+                "Not Used For": ["Data storage", "Query execution", "Client requests", "Indexing operations"]
             }
         },
         "OSCoord": {
@@ -595,11 +638,10 @@ graph TB
             "details": {
                 "Responsibilities": ["Route search requests", "Scatter-gather queries", "Merge shard results", "Reduce aggregations"],
                 "Performance": ["No data storage (stateless)", "Fast result merging", "Connection pooling", "Request caching"],
-                "Load Balancing": ["Health-aware routing", "Adaptive retry", "Circuit breaker", "Timeout management"],
-                "Optimization": ["Query cache enabled", "Response compression", "Keep-alive connections", "Async I/O"]
+                "Load Balancing": ["Health-aware routing", "Adaptive retry", "Circuit breaker", "Timeout management"]
             }
         },
-        "OSData": {
+        "OSHot": {
             "title": "OpenSearch Data Nodes (Hot)",
             "type": "Search & Storage",
             "description": "High-performance SSD storage for recent indices with fast query execution",
@@ -610,10 +652,9 @@ graph TB
                 "Query Latency": "<200ms (P95)"
             },
             "details": {
-                "Storage": ["Primary shards", "Replica shards", "Inverted indexes", "Vector indexes (HNSW)"],
+                "Storage": ["Primary shards", "Replica shards", "Inverted indexes", "HNSW vector indexes"],
                 "Indexes": ["Events index (6 shards)", "Bookings index (partitioned)", "Audit logs (recent)", "Search history"],
-                "Performance": ["SSD for fast I/O", "JVM heap: 16GB", "Query cache", "Filter cache"],
-                "Monitoring": ["Heap usage (<75%)", "CPU utilization (<70%)", "Disk I/O", "Cache hit rate"]
+                "Performance": ["SSD for fast I/O", "JVM heap: 16GB", "Query cache", "Filter cache"]
             }
         },
         "OSWarm": {
@@ -623,14 +664,29 @@ graph TB
             "metrics": {
                 "Count": "3 nodes",
                 "Instance": "r6i.large (4 vCPU, 32GB, 4TB HDD)",
-                "Data Age": "90 days - 7 years",
+                "Data Age": "90 days - 2 years",
                 "Query Latency": "300-800ms"
             },
             "details": {
                 "Storage": ["Older audit logs", "Archived bookings", "Historical analytics", "Compliance data"],
                 "Cost Optimization": ["HDD vs SSD (75% cheaper)", "Higher compression", "Reduced replicas", "Fewer shards"],
-                "ILM Policies": ["Auto-migration at 90 days", "Compression enabled", "Force merge", "Read-only mode"],
-                "Compliance": ["7-year retention", "WORM enforcement", "Backup verification", "Restore testing"]
+                "ILM Policies": ["Auto-migration at 90 days", "Compression enabled", "Force merge", "Read-only mode"]
+            }
+        },
+        "OSCold": {
+            "title": "Cold Storage (S3 Glacier)",
+            "type": "Archive Storage",
+            "description": "Ultra-low-cost archival storage for 2-7 year old compliance data",
+            "metrics": {
+                "Storage Type": "S3 Glacier",
+                "Data Age": "2-7 years",
+                "Cost": "BDT 0.8/GB/month",
+                "Retrieval Time": "1-5 hours"
+            },
+            "details": {
+                "Use Cases": ["7-year audit compliance", "Historical analytics", "Legal discovery", "Regulatory requests"],
+                "Features": ["Immutable storage", "Compliance lock", "Versioning enabled", "Cross-region replication"],
+                "Access": ["Query via Athena", "Selective restore", "Batch retrieval", "Export to CSV"]
             }
         },
         "NewRelic": {
@@ -647,7 +703,7 @@ graph TB
                 "APM Monitoring": ["API latency (P50/P95/P99)", "Throughput (QPS)", "Error rates", "Transaction traces"],
                 "Infrastructure": ["CPU/Memory/Disk", "Network I/O", "Container metrics", "Database connections"],
                 "Intelligent Alerting": ["Baseline learning (7 days)", "Anomaly detection (3σ)", "Alert aggregation (15min)", "Correlation analysis"],
-                "Dashboards": ["Platform overview", "Per-tenant metrics", "SLA compliance", "Database performance", "Queue health", "Security events", "Business metrics", "User analytics"]
+                "Dashboards": ["Platform overview", "Per-tenant metrics", "SLA compliance", "Database performance"]
             }
         },
         "OCIVault": {
@@ -663,8 +719,7 @@ graph TB
             "details": {
                 "Use Cases": ["Database credentials encryption", "Per-tenant encryption keys", "Payment token encryption", "Field-level encryption (NID)"],
                 "Key Hierarchy": ["Master key (HSM-backed)", "Per-tenant derived keys (HKDF)", "Automatic rotation", "Version management"],
-                "Access Control": ["Instance principal authentication", "IAM policies", "Audit logging", "Key usage tracking"],
-                "Compliance": ["PCI-DSS compliant", "Bangladesh Bank approved", "GDPR-ready", "SOC 2 certified"]
+                "Access Control": ["Instance principal authentication", "IAM policies", "Audit logging", "Key usage tracking"]
             }
         },
         "OCIBackup": {
@@ -674,44 +729,36 @@ graph TB
             "metrics": {
                 "RPO": "<5 minutes (WAL)",
                 "RTO": "<15 minutes (automated)",
-                "Retention": "7d/4w/3m tiers",
+                "Retention": "7d/4w/3m/7y tiers",
                 "Storage Cost": "BDT 8/GB → 0.8/GB (tiering)"
             },
             "details": {
                 "Backup Types": ["Hourly snapshots (24h retention)", "Daily full backup (7d)", "Weekly backup (4w)", "Monthly archive (3m)", "WAL continuous archiving"],
                 "Storage Tiers": ["Hot: Recent backups (7d)", "Cool: Weekly backups (4w)", "Cold: Monthly archives (3m)", "Archive: Compliance (7y)"],
                 "Verification": ["Monthly restore tests", "Automated validation", "Checksum verification", "RTO measurement"],
-                "Cross-Region": ["Weekly replication to Singapore", "Disaster recovery capability", "RTO: <8 hours (region failure)", "RPO: <4 hours (weekly snapshot)"]
+                "Cross-Region": ["Weekly replication to Singapore", "Disaster recovery capability", "RTO: <8 hours (region failure)"]
             }
         }
     };
 
     // Copy configurations for similar components
     Object.assign(componentData, {
-        NextJS2: componentData.NextJS1,
-        LaravelAPI2: componentData.LaravelAPI1,
-        LaravelAPI3: componentData.LaravelAPI1,
-        TenantDB2: componentData.TenantDB1,
-        TenantDB106: componentData.TenantDB1,
-        Horizon2: componentData.Horizon1,
-        Horizon3: componentData.Horizon1
-    });
-
-    // Add constraint boxes
-    ['WAFRules', 'ALBConfig', 'NextJSConfig', 'APIConfig', 'RedisConfig', 'MasterConfig',
-        'DBConfig', 'PoolConfig', 'HorizonConfig', 'OSConfig', 'PaymentConfig', 'NIDConfig',
-        'NewRelicConfig', 'VaultConfig', 'BackupConfig'].forEach(k => {
-        if (!componentData[k]) {
-            componentData[k] = {
-                title: k.replace(/([A-Z])/g, ' $1').trim(),
-                type: 'Configuration',
-                description: 'Service-level configuration and constraints',
-                metrics: {},
-                details: {
-                    Notes: ['Configuration box showing key parameters and requirements for the connected component']
-                }
-            };
-        }
+        NextJSConfig: componentData.NextJS,
+        APIConfig: componentData.LaravelAPI,
+        RedisConfig: componentData.RedisCluster,
+        MasterConfig: componentData.MasterDB,
+        DBConfig: componentData.TenantDB1,
+        PoolConfig: componentData.PgBouncer,
+        HorizonConfig: componentData.Horizon,
+        OSConfig: componentData.OpenSearch,
+        PaymentConfig: componentData.bKash,
+        NIDConfig: componentData.NIDAPI,
+        NewRelicConfig: componentData.NewRelic,
+        VaultConfig: componentData.OCIVault,
+        BackupConfig: componentData.OCIBackup,
+        CFConfig: componentData.CloudFlare,
+        WAFConfig: componentData.AWSWAF,
+        ALBConfig: componentData.ALB
     });
 
     let currentNode = null;
